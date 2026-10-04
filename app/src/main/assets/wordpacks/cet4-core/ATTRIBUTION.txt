@@ -1,0 +1,7 @@
+四级核心词汇词库来源说明
+
+- 词表来源：https://github.com/openetymology/OpenEtymology/tree/main/CET4; ECDICT BNC frequency ordering
+- 中文释义、音标、词性和词形变体：ECDICT（MIT）
+- OpenEtymology 词表数据：CC BY-SA 4.0
+
+本应用只把词库作为离线学习数据打包，不在运行时访问网络。

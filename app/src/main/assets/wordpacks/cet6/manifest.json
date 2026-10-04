@@ -1,0 +1,9 @@
+{
+  "packId": "cet6-core",
+  "displayName": "六级核心词汇（2219词）",
+  "schemaVersion": 1,
+  "sourceUrl": "https://github.com/openetymology/OpenEtymology/tree/main/CET6",
+  "licenseName": "CC BY-SA 4.0 + MIT",
+  "attribution": "CET6 core list: OpenEtymology; definitions and word forms: ECDICT; examples: Tatoeba bilingual sentence corpus.",
+  "checksum": "sha256:ab67fb5f85119f11e9b00380baadc5bb0c3be2f035965b5207a6e28e3abc8bdf"
+}

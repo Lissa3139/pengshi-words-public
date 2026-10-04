@@ -1,0 +1,54 @@
+# Build and editor files
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Credentials and signing
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+*.pem
+*.key
+
+# Personal learning data and local working files
+/repository/
+/personal-source/
+/pengshi-desktop/
+/sync-recovery/
+/tools/device-backups/
+/tools/tatoeba-cache/
+/tmp/
+/output/
+/.archive/
+/.desktop-build/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.log
+*.hprof
+*.bak
+*backup*.json
+
+# Installers are distributed through Releases
+/release/
+*.apk
+*.aab
+*.apks
+*.msi
+*.exe
+
+# Python environment and cache
+.venv/
+__pycache__/
+*.pyc

@@ -1,0 +1,23 @@
+{
+  "packId": "generated-examples",
+  "generatedOn": "2026-09-28",
+  "generatedExampleCount": 5655,
+  "sourceTag": "source:ai-generated",
+  "purpose": "Offline supplemental examples for bundled vocabulary that has no valid example sentence.",
+  "generationPolicy": "One concise, natural English usage sentence containing the headword or a normal grammatical inflection, plus a Simplified Chinese translation.",
+  "runtimeGeneration": false,
+  "reviewedCorrectionCount": 58,
+  "fallbackNote": "58 entries were reviewed and corrected for incomplete translations or unnatural usage.",
+  "reviewNote": "The original pack includes 58 reviewed corrections. Of the 321 examples added on 2026-10-04, 320 were machine-generated and one spelling-sensitive entry was manually written; several entries were lightly edited. The new set has not received full expert editorial review.",
+  "preparationModel": "Qwen3 4B (used only to prepare static data; no model code or runtime dependency is included)",
+  "updatedOn": "2026-10-04",
+  "additionalExampleCount": 321,
+  "additionalModelGeneratedCount": 320,
+  "manuallyAuthoredAdditionalCount": 1,
+  "manualSourceExceptions": [
+    {
+      "spelling": "archeology",
+      "sourceTag": "source:manual"
+    }
+  ]
+}

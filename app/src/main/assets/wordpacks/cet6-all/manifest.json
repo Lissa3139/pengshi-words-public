@@ -1,0 +1,9 @@
+{
+  "packId": "cet6-all",
+  "displayName": "六级全部词汇（5407词）",
+  "schemaVersion": 1,
+  "sourceUrl": "https://github.com/skywind3000/ECDICT (tag: cet6)",
+  "licenseName": "MIT",
+  "attribution": "词表及中文释义、音标、词性和词形信息：ECDICT（tag: cet6）。",
+  "checksum": "sha256:a92b854b5356f80d0b964c481b7225d11c26f8eb09b3a77d2b9d556c9fd84fa7"
+}

@@ -1,0 +1,11 @@
+六级核心词汇（2219词）来源说明
+
+- 核心词清单：OpenEtymology CET6
+  https://github.com/openetymology/OpenEtymology/tree/main/CET6
+- 中文释义、音标、词性和词形变体：ECDICT
+  https://github.com/skywind3000/ECDICT
+- 英文例句：彭式背单词离线例句生成数据
+
+本应用只把词库作为离线学习数据打包，不在运行时访问网络。词形变体保存在
+family: 标签中，用于展示同一词族；相近词由应用本地规则补充，不声称复刻任何
+第三方应用的专有算法。

@@ -1,0 +1,20 @@
+{
+  "upstream": "sherpa-onnx",
+  "version": "1.13.8",
+  "abi": "arm64-v8a",
+  "binarySourceUrl": "https://huggingface.co/csukuangfj2/sherpa-onnx-apk/resolve/main/tts-engine-new/1.13.8/sherpa-onnx-1.13.8-arm64-v8a-eng-tts-engine-vits-piper-en_US-lessac-medium.apk",
+  "binaryContent": "Only lib/arm64-v8a/libonnxruntime.so and libsherpa-onnx-jni.so; no Lessac model or APK bytecode bundled.",
+  "binaryUnmodified": true,
+  "upstreamSource": "https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8",
+  "kotlinSource": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/Tts.kt",
+  "files": {
+    "libonnxruntime.so": "33847ad43bffe204699fd4a27f7f3603452a8cdaf2f9a44983a0bc31ffcf2da1",
+    "libsherpa-onnx-jni.so": "3c6492ea91ea68fd3b72b9495efdde6dd913f6b58c387e3b07389cf335f4d26f"
+  },
+  "kotlinSha256": "1a2a19e247553f774c5abdfda8319ce9e1a44e21279b16dc2c63e963a82ea9b1",
+  "upstreamCommit": "11afbd009a7f8c08f4bcf2fc1b265d0df4670fbf",
+  "onnxRuntimeVersion": "1.28.2",
+  "onnxRuntimeSource": "https://github.com/microsoft/onnxruntime/tree/v1.28.2",
+  "espeakSource": "https://github.com/csukuangfj/espeak-ng/tree/ed530aa113046142eb5115cf2fc9157854d0ffe1",
+  "buildIntegration": "https://github.com/k2-fsa/sherpa-onnx/tree/11afbd009a7f8c08f4bcf2fc1b265d0df4670fbf/cmake"
+}

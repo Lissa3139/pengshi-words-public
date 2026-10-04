@@ -1,0 +1,14 @@
+{
+  "packId": "kaoyan-shared",
+  "displayName": "考研英语(2024大纲)",
+  "schemaVersion": 1,
+  "sourceUrl": "https://github.com/exam-data/NETEMVocabulary/blob/70dc6b68c855f21e666a7a291ff8ead5ca1f7b44/netem_full_list.json",
+  "sourceCommit": "70dc6b68c855f21e666a7a291ff8ead5ca1f7b44",
+  "sourceRecordCount": 5530,
+  "uniqueWordCount": 5528,
+  "phoneticCount": 5509,
+  "licenseName": "CC BY-NC-SA 4.0 for NETEM-derived list fields; MIT for ECDICT phonetics and parts of speech",
+  "attribution": "NETEMVocabulary contributors (2024 English I outline list), ECDICT contributors (phonetics and parts of speech); adapted by PengshiWords contributors.",
+  "officialScopeSourceUrl": "https://yz.chsi.com.cn/kyzx/bkzn/202506/20250618/2293390155.html",
+  "checksum": "sha256:7853f31f41281ad1e35f21f928e0f29b373c7add3c25dfc1060d40c2ec4c11eb"
+}

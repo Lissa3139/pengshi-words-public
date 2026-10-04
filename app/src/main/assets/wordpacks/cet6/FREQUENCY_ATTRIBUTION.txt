@@ -1,0 +1,4 @@
+Frequency order is a filtered rank generated from the 50,000-entry English list:
+https://github.com/hermitdave/FrequencyWords/blob/master/content/2018/en/en_50k.txt
+Only words present in the bundled CET-6 core pack are retained; unmatched words are placed in a deterministic alphabetical tail.
+Retrieved 2026-09-15 for local, offline selection.

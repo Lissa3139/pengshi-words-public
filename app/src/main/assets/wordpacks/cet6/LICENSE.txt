@@ -1,0 +1,11 @@
+本词包由多个来源组成，适用许可如下：
+
+1. OpenEtymology 的 CET6 核心词清单：CC BY-SA 4.0。
+   https://github.com/openetymology/OpenEtymology/blob/main/DATA_LICENSE.md
+
+2. ECDICT 的释义、音标和词形字段：按 ECDICT 项目发布的 MIT 许可使用。
+   https://github.com/skywind3000/ECDICT
+
+3. 彭式背单词生成的离线英文例句：MIT License。
+
+Redistribution must retain the attribution and license notices above.

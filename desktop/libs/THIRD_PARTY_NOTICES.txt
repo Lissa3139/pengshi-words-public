@@ -1,0 +1,12 @@
+Sherpa-ONNX 1.13.8
+Copyright (c) 2022-2026 k2-fsa
+License: Apache License 2.0
+Project: https://github.com/k2-fsa/sherpa-onnx
+
+Bundled artifacts:
+- sherpa-onnx-jvm-1.13.8.jar
+  SHA-256: 77B7B047FADE4EADADA96B568EB92615049AAF1DC317C7244E46C1EA38B9A63B
+- sherpa-onnx-native-lib-win-x64-1.13.8.jar
+  SHA-256: 33FBDBD5410E9BA9BDDA94AA164EC8F7825BB49246420D8CE9BDD88219D97039
+
+The native artifact contains the Windows x64 JNI library and ONNX Runtime DLL.

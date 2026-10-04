@@ -1,0 +1,14 @@
+本词包包含不同来源的数据，分别适用以下许可：
+
+1. 词目、中文释义、分类和词频排序：CC BY-NC-SA 4.0。
+   署名：exam-data / NETEMVocabulary contributors。
+   来源和修改说明见同目录 ATTRIBUTION.txt。
+   许可：https://creativecommons.org/licenses/by-nc-sa/4.0/
+   商业用途不在许可范围内；分发改编版本时须沿用相同许可。
+   完整许可文本：项目根目录 licenses/CC-BY-NC-SA-4.0.txt。
+
+2. 音标字段：ECDICT MIT License。
+   来源：https://github.com/skywind3000/ECDICT/tree/bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b
+   许可全文：项目根目录 licenses/ecdict-MIT.txt。
+
+项目源代码采用 GPLv3；这不改变上述词库数据各自的许可条件。

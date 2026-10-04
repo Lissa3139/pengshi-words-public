@@ -1,0 +1,6 @@
+六级全部词汇词库来源说明
+
+- 词表、中文释义、音标、词性和词形变体：https://github.com/skywind3000/ECDICT (tag: cet6)
+- ECDICT 数据：MIT License
+
+本应用只把词库作为离线学习数据打包，不在运行时访问网络。

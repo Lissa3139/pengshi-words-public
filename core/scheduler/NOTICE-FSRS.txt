@@ -1,0 +1,39 @@
+FSRS algorithm notice
+=====================
+
+The local scheduling engine in this module is an app-owned, dependency-free
+implementation of the FSRS-6 formulas and is designed to be replaceable behind
+the FsrsEngine interface.
+
+Algorithm and Kotlin implementation references:
+- FSRS algorithm documentation by the Open Spaced Repetition project:
+  https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm
+- FSRS-Kotlin v6 reference implementation, main commit
+  670f2f895f316a9f78dfd19b991d9bc523c9b037:
+  https://github.com/open-spaced-repetition/FSRS-Kotlin
+
+The FSRS-Kotlin project states that its implementation is provided under the
+MIT License. This notice preserves that attribution and the applicable license
+terms for the algorithm-derived implementation in this module.
+
+MIT License
+
+Copyright (c) Open Spaced Repetition and FSRS-Kotlin contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

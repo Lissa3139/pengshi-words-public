@@ -1,0 +1,9 @@
+{
+  "packId": "cet4-core",
+  "displayName": "四级核心词汇（2000词）",
+  "schemaVersion": 1,
+  "sourceUrl": "https://github.com/openetymology/OpenEtymology/tree/main/CET4; ECDICT BNC frequency ordering",
+  "licenseName": "CC BY-SA 4.0 + MIT",
+  "attribution": "词表：OpenEtymology / ECDICT；中文释义、音标、词性和词形信息：ECDICT。",
+  "checksum": "sha256:7f086d187476d065a1bbad1e49f5ee73226cab5585fb7d1e19473390c315eff3"
+}

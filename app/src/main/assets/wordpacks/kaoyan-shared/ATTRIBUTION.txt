@@ -1,0 +1,20 @@
+考研英语(2024大纲)
+
+词目、中文释义、分类和词频排序来源：exam-data / NETEMVocabulary 的
+2024 年全国硕士研究生招生考试英语（一）大纲词汇整理数据。
+源数据提交：70dc6b68c855f21e666a7a291ff8ead5ca1f7b44
+源文件：https://github.com/exam-data/NETEMVocabulary/blob/70dc6b68c855f21e666a7a291ff8ead5ca1f7b44/netem_full_list.json
+
+源数据包含 5,530 条记录。此词包按不区分大小写的拼写去重，合并 May/may、
+March/march 两组重复词条，保留源词频顺序，转换为应用 CSV 格式，共 5,528 词。
+音标及词性依据 ECDICT 提交 bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b 的
+词典记录整理；少数未能从词典释义提取词性的词条由项目贡献者补充。
+ECDICT 采用 MIT 许可，全文见项目根目录 licenses/ecdict-MIT.txt。
+
+中国研究生招生信息网说明，英语一与英语二的大纲词汇范围相同，均约 5,500 词：
+https://yz.chsi.com.cn/kyzx/bkzn/202506/20250618/2293390155.html
+因此本项目只提供一个共用词库；它基于英语一 2024 大纲整理，并非两套独立词表。
+
+NETEMVocabulary 派生词表及释义按 CC BY-NC-SA 4.0 提供。此转换版本标注来源并
+记录了去重、格式转换和音标补充；对该来源内容的改编应继续采用 CC BY-NC-SA 4.0，
+且不得用于商业目的。完整许可文本见项目根目录 licenses/CC-BY-NC-SA-4.0.txt。
