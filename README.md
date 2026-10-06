@@ -2,13 +2,35 @@
 
 一款以本地词库、间隔复习和英语朗读为基础的 Android 与 Windows 背单词应用。
 
+[![Android build](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml/badge.svg)](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml)
+[![Latest release](https://img.shields.io/github/v/release/Lissa3139/pengshi-words-public?display_name=tag&label=release)](https://github.com/Lissa3139/pengshi-words-public/releases/latest)
+![Android 8+ ARM64](https://img.shields.io/badge/Android-8%2B%20%7C%20ARM64-3DDC84?logo=android&logoColor=white)
+![Windows 10/11 x64](https://img.shields.io/badge/Windows-10%2F11%20%7C%20x64-0078D4?logo=windows&logoColor=white)
+[![Code license](https://img.shields.io/badge/code%20license-GPLv3-blue)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/Lissa3139/pengshi-words-public?label=stars)](https://github.com/Lissa3139/pengshi-words-public/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/Lissa3139/pengshi-words-public/total?label=downloads)](https://github.com/Lissa3139/pengshi-words-public/releases)
+
 **当前版本：1.0.0 · versionCode 1**
 
 **支持设备：Android 8.0 及以上 ARM64（arm64-v8a）设备；Windows 10/11 x64 电脑。**
 
-## 普通用户从这里开始
+## 界面预览
 
-正式发行的安装包会放在本仓库的 **Releases** 页面；源码压缩包不能直接安装。仓库根目录的 `release/` 用于本地验收，安装包不会随源码提交。
+以下为 Windows 桌面端的实际界面，截图使用空白演示数据。
+
+| 首页 | 学习页 |
+| --- | --- |
+| <img src="docs/images/readme/windows-home.png" alt="彭式背单词 Windows 首页" width="100%"> | <img src="docs/images/readme/windows-study.png" alt="彭式背单词 Windows 学习页" width="100%"> |
+
+## 普通用户：下载与安装
+
+当前公开版本为 **1.0.0**，可直接下载：
+
+- **Android ARM64**：[下载 APK（debug 签名）](https://github.com/Lissa3139/pengshi-words-public/releases/download/v1.0.0/PengshiWords-1.0.0-arm64-debug.apk)
+- **Windows x64**：[下载 MSI 安装包（推荐）](https://github.com/Lissa3139/pengshi-words-public/releases/download/v1.0.0/PengshiWords-1.0.0-windows-x64.msi) · [下载 EXE 安装包](https://github.com/Lissa3139/pengshi-words-public/releases/download/v1.0.0/PengshiWords-1.0.0-windows-x64.exe)
+- [查看全部版本与安装包](https://github.com/Lissa3139/pengshi-words-public/releases)
+
+Release 页面中的 **Source code (zip)** 和 **Source code (tar.gz)** 是 GitHub 自动生成的源码快照，不是安装程序；普通用户请下载上面的 APK、MSI 或 EXE。仓库根目录的 `release/` 仅用于本地验收，安装包不会提交到源码仓库。
 
 **Android：**在手机上打开 APK，按系统提示允许安装；首次启动后在「词库」中选择四级、六级、**考研英语(2024大纲)** 或自己的词库。应用内置 LJSpeech 美式女声音色。
 
