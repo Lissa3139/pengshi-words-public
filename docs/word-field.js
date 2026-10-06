@@ -1,18 +1,11 @@
 (() => {
   const canvas = document.querySelector("#word-field");
-  const stage = canvas?.closest(".hero-art");
+  const stage = canvas?.closest(".hero");
   const context = canvas?.getContext("2d");
   if (!canvas || !stage || !context) return;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const random = seededRandom(0x5eed2026);
-  const points = Array.from({ length: 148 }, (_, index) => ({
-    x: random(),
-    y: random(),
-    phase: random() * Math.PI * 2,
-    drift: 1.5 + random() * 8,
-    mint: index % 6 === 0 || index % 11 === 0,
-  }));
+  let points = [];
 
   let width = 0;
   let height = 0;
@@ -37,11 +30,24 @@
     const bounds = stage.getBoundingClientRect();
     width = bounds.width;
     height = bounds.height;
-    pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
     canvas.width = Math.round(width * pixelRatio);
     canvas.height = Math.round(height * pixelRatio);
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    points = createPoints();
     draw(performance.now());
+  }
+
+  function createPoints() {
+    const count = Math.min(360, Math.max(100, Math.round((width * height) / 3600)));
+    const random = seededRandom(0x5eed2026 + count);
+    return Array.from({ length: count }, (_, index) => ({
+      x: random(),
+      y: random(),
+      phase: random() * Math.PI * 2,
+      drift: 2 + random() * 10,
+      mint: index % 5 === 0,
+    }));
   }
 
   function draw(timestamp) {
@@ -69,8 +75,8 @@
 
       context.beginPath();
       context.fillStyle = point.mint ? "#63e3cc" : "#78969d";
-      context.globalAlpha = point.mint ? 0.86 + pulse * 0.14 : 0.58 + pulse * 0.3;
-      context.arc(x, y, (point.mint ? 1.65 : 1.1) + pulse * 1.5, 0, Math.PI * 2);
+      context.globalAlpha = point.mint ? 0.82 + pulse * 0.18 : 0.5 + pulse * 0.36;
+      context.arc(x, y, (point.mint ? 1.7 : 1.15) + pulse * 1.5, 0, Math.PI * 2);
       context.fill();
     }
 
