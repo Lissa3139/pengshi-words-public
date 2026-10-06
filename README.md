@@ -2,6 +2,8 @@
 
 一款以本地词库、间隔复习和英语朗读为基础的 Android 与 Windows 背单词应用。
 
+[项目网站](https://lissa3139.github.io/pengshi-words-public/) · [下载最新版本](https://github.com/Lissa3139/pengshi-words-public/releases/latest) · [使用指南](docs/user-guide.md)
+
 [![Android build](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml/badge.svg)](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml)
 [![Latest release](https://img.shields.io/github/v/release/Lissa3139/pengshi-words-public?display_name=tag&label=release)](https://github.com/Lissa3139/pengshi-words-public/releases/latest)
 ![Android 8+ ARM64](https://img.shields.io/badge/Android-8%2B%20%7C%20ARM64-3DDC84?logo=android&logoColor=white)
