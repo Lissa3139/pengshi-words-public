@@ -39,14 +39,17 @@
   }
 
   function createPoints() {
-    const count = Math.min(360, Math.max(100, Math.round((width * height) / 3600)));
+    // Scale the star field with the viewport, up to the 7,000-word library scale.
+    const minimum = window.matchMedia("(pointer: coarse)").matches ? 1000 : 1600;
+    const count = Math.min(7000, Math.max(minimum, Math.round((width * height) / 230)));
     const random = seededRandom(0x5eed2026 + count);
     return Array.from({ length: count }, (_, index) => ({
       x: random(),
       y: random(),
       phase: random() * Math.PI * 2,
-      drift: 2 + random() * 10,
-      mint: index % 5 === 0,
+      drift: index % 16 === 0 ? 1.5 + random() * 3.5 : 0,
+      radius: 0.35 + random() * 0.55,
+      mint: index % 11 === 0,
     }));
   }
 
@@ -60,26 +63,31 @@
     const rippleProgress = rippleActive ? rippleAge / 1200 : 0;
     const rippleRadius = rippleProgress * Math.min(width, height) * 0.36;
 
+    context.beginPath();
     for (const point of points) {
-      const swayX = reducedMotion.matches ? 0 : Math.sin(seconds * 0.2 + point.phase) * point.drift;
-      const swayY = reducedMotion.matches ? 0 : Math.cos(seconds * 0.16 + point.phase) * point.drift * 0.55;
+      const swayX = !reducedMotion.matches && point.drift ? Math.sin(seconds * 0.2 + point.phase) * point.drift : 0;
+      const swayY = !reducedMotion.matches && point.drift ? Math.cos(seconds * 0.16 + point.phase) * point.drift * 0.55 : 0;
       const x = point.x * width + swayX;
       const y = point.y * height + swayY;
-      let pulse = 0;
-
-      if (rippleActive) {
-        const distance = Math.hypot(x - pointer.x, y - pointer.y);
-        const waveDistance = Math.abs(distance - rippleRadius);
-        pulse = Math.max(0, 1 - waveDistance / 13) * (1 - rippleProgress);
-      }
-
-      context.beginPath();
-      context.fillStyle = point.mint ? "#63e3cc" : "#78969d";
-      context.globalAlpha = point.mint ? 0.82 + pulse * 0.18 : 0.5 + pulse * 0.36;
-      context.arc(x, y, (point.mint ? 1.7 : 1.15) + pulse * 1.5, 0, Math.PI * 2);
-      context.fill();
+      context.moveTo(x + point.radius, y);
+      context.arc(x, y, point.radius, 0, Math.PI * 2);
     }
-
+    context.fillStyle = "#9ab2bf";
+    context.globalAlpha = 0.44;
+    context.fill();
+    context.beginPath();
+    for (const point of points) {
+      if (!point.mint) continue;
+      const swayX = !reducedMotion.matches && point.drift ? Math.sin(seconds * 0.2 + point.phase) * point.drift : 0;
+      const swayY = !reducedMotion.matches && point.drift ? Math.cos(seconds * 0.16 + point.phase) * point.drift * 0.55 : 0;
+      const x = point.x * width + swayX;
+      const y = point.y * height + swayY;
+      context.moveTo(x + point.radius * 1.35, y);
+      context.arc(x, y, point.radius * 1.35, 0, Math.PI * 2);
+    }
+    context.fillStyle = "#63e3cc";
+    context.globalAlpha = 0.72;
+    context.fill();
     context.globalAlpha = 1;
     if (rippleActive) drawRipple(rippleRadius, rippleProgress);
   }

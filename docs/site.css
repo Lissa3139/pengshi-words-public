@@ -113,3 +113,15 @@ button,a{-webkit-tap-highlight-color:transparent}
 @media(max-width:620px){.site-header{height:70px;padding:0 18px}.brand{font-size:13px}.brand img{width:28px;height:28px}.primary-nav{gap:13px;font-size:11px}.header-link{display:none}.hero{min-height:auto;padding:127px 20px 70px}.hero-logo{width:53px;height:53px}.hero h1{font-size:clamp(44px,11vw,68px)}.hero-lede{font-size:14px}.wide-only{display:none}.hero-product{width:min(265px,72vw);margin-top:64px;border:7px solid #26394a;border-radius:28px}.hero-product-top{display:none}.hero-product img{width:100%;height:auto}.scroll-cue{margin-top:25px}.preview-section{padding-top:24px}.section-shell{width:calc(100% - 34px)}.section-intro h2,.developer-section h2{font-size:32px}.section-intro>p:last-child{font-size:12px}.gallery{margin-top:28px}.gallery-viewport{min-height:360px;border-radius:15px}.gallery-image-wrap{max-width:calc(100% - 24px);margin:22px auto}.gallery[data-platform="android"] .gallery-image-wrap{width:200px;margin:25px auto}.gallery[data-platform="android"] .gallery-image-wrap img{max-height:460px}.gallery-bottom{align-items:start}.gallery-bottom h3{font-size:17px}.gallery-dots{max-width:95px}.feature-grid{gap:10px}.feature-grid article{min-height:215px;padding:19px 15px}.feature-grid h3{margin-top:22px;font-size:16px}.feature-grid p{font-size:11px}.features-section{padding-bottom:75px}.developer-section{padding-bottom:75px}.acknowledgement{margin-top:66px}.site-footer{justify-content:center;text-align:center}}
 @media(max-width:390px){.primary-nav{gap:9px}.brand span{max-width:80px;overflow:hidden;white-space:nowrap}.feature-grid{grid-template-columns:1fr}.feature-grid article{min-height:0}.gallery-bottom{display:block}.gallery-dots{justify-content:flex-start;max-width:none;margin-top:15px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Keep the opening focused on the brand; the detailed UI gallery follows below. */
+.hero{display:flex;flex-direction:column;justify-content:center;min-height:100svh;padding:126px 24px 78px}
+.hero-content{width:min(100%,900px);margin:auto}
+.hero-logo{width:96px;height:96px;margin:0 auto 25px}
+.hero h1{font-size:clamp(62px,8.5vw,106px);line-height:1.17}
+.hero-lede{margin:25px auto 32px;font-size:clamp(17px,1.55vw,21px);letter-spacing:.025em}
+.scroll-cue{align-self:center}
+.download-menu{color:var(--fg)}
+.download-menu strong{color:#f4fbfc}
+.download-menu small{color:#b9cbd1}
+@media(max-width:620px){.hero{min-height:100svh;padding:105px 20px 64px}.hero-logo{width:78px;height:78px;margin-bottom:25px}.hero h1{font-size:clamp(44px,11vw,70px)}.hero-lede{max-width:340px;margin:23px auto 30px;font-size:16px;line-height:1.8}.hero-links{gap:16px}}
