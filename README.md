@@ -7,8 +7,6 @@
 ![Android 8+ ARM64](https://img.shields.io/badge/Android-8%2B%20%7C%20ARM64-3DDC84?logo=android&logoColor=white)
 ![Windows 10/11 x64](https://img.shields.io/badge/Windows-10%2F11%20%7C%20x64-0078D4?logo=windows&logoColor=white)
 [![Code license](https://img.shields.io/badge/code%20license-GPLv3-blue)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/Lissa3139/pengshi-words-public?label=stars)](https://github.com/Lissa3139/pengshi-words-public/stargazers)
-[![Downloads](https://img.shields.io/github/downloads/Lissa3139/pengshi-words-public/total?label=downloads)](https://github.com/Lissa3139/pengshi-words-public/releases)
 
 **当前版本：1.0.0 · versionCode 1**
 
@@ -16,11 +14,15 @@
 
 ## 界面预览
 
-以下为 Windows 桌面端的实际界面，截图使用空白演示数据。
+以下为实际应用界面。学习记录使用独立的虚构演示数据，不包含个人资料。
 
-| 首页 | 学习页 |
+| Windows 首页 | Windows 学习 |
 | --- | --- |
-| <img src="docs/images/readme/windows-home.png" alt="彭式背单词 Windows 首页" width="100%"> | <img src="docs/images/readme/windows-study.png" alt="彭式背单词 Windows 学习页" width="100%"> |
+| <img src="docs/images/site/screens/windows-home.png" alt="彭式背单词 Windows 首页" width="100%"> | <img src="docs/images/site/screens/windows-study-answer.png" alt="彭式背单词 Windows 学习页" width="100%"> |
+
+| Android 首页 | Android 学习 |
+| --- | --- |
+| <img src="docs/images/site/screens/android-home.png" alt="彭式背单词 Android 首页" width="260"> | <img src="docs/images/site/screens/android-study-answer.png" alt="彭式背单词 Android 学习页" width="260"> |
 
 ## 普通用户：下载与安装
 
@@ -121,3 +123,5 @@ chmod +x gradlew
 项目代码采用 **GNU GPL v3.0**，完整条款见 [LICENSE](LICENSE)。分发应用或修改版时，需要保留许可与版权说明，并按 GPLv3 提供对应源码。
 
 词表、词典、例句、语音模型和第三方运行组件各自保留原有许可；项目代码许可证不改变它们的条款。具体来源见[第三方说明](THIRD_PARTY_NOTICES.md)。
+
+感谢墨墨背单词公开分享间隔复习研究与产品经验。参考范围、官方论文链接与本项目调度实现的区别，见[参考与致谢](docs/references.md)。
