@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07151B">
+    <meta
+      name="description"
+      content="彭式背单词：面向 Android 与 Windows 的免费开源背词应用。离线词库、间隔复习与英语朗读，让学习节奏由你掌握。"
+    >
+    <title>彭式背单词｜记一词，志更远</title>
+    <link rel="icon" href="images/site/pengshi_logo.png" type="image/png">
+    <link rel="stylesheet" href="site.css">
+    <script src="word-field.js" defer></script>
+    <script src="site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="彭式背单词首页">
+        <img src="images/site/pengshi_logo.png" alt="" width="40" height="40">
+        <span class="brand-copy">
+          <strong>彭式背单词</strong>
+          <span>记一词，志更远</span>
+        </span>
+      </a>
+      <nav class="primary-nav" aria-label="主导航">
+        <a href="#features">应用特点</a>
+        <a href="#preview">界面预览</a>
+        <a href="#download">下载</a>
+        <a href="#developers">开发者</a>
+      </nav>
+      <a class="header-link" href="https://github.com/Lissa3139/pengshi-words-public" target="_blank" rel="noreferrer">
+        GitHub <span aria-hidden="true">↗</span>
+      </a>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> ANDROID · WINDOWS · GPL-3.0</p>
+            <h1 id="hero-title">记一词，<br><span>志更远。</span></h1>
+            <p class="hero-lede">
+              用自己的节奏积累词汇。先复习，再学新词；离线词库、朗读和可选同步，让每天的学习更踏实。
+            </p>
+            <div class="hero-actions" aria-label="获取应用">
+              <a class="button button-primary" id="hero-android-link" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">
+                <span class="button-icon" aria-hidden="true">↓</span>
+                <span><strong>Android APK</strong><small>ARM64 · Android 8+</small></span>
+              </a>
+              <a class="button button-secondary" id="hero-windows-link" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">
+                <span class="button-icon" aria-hidden="true">↓</span>
+                <span><strong>Windows 安装包</strong><small>x64 · Windows 10/11</small></span>
+              </a>
+            </div>
+            <a class="release-jump" href="#download">查看最新版本与全部下载 <span aria-hidden="true">↓</span></a>
+          </div>
+
+          <figure class="hero-art" aria-label="彭式背单词启动画面风格的词点动效">
+            <canvas id="word-field" aria-hidden="true"></canvas>
+            <div class="art-orbit art-orbit-one" aria-hidden="true"></div>
+            <div class="art-orbit art-orbit-two" aria-hidden="true"></div>
+            <span class="word-tag word-tag-top" aria-hidden="true">REVIEW</span>
+            <span class="word-tag word-tag-side" aria-hidden="true">ONE WORD AT A TIME</span>
+            <div class="art-brand">
+              <img class="hero-logo" src="images/site/pengshi_logo.png" alt="" width="76" height="76">
+              <strong>彭式背单词</strong>
+              <span>记一词，志更远</span>
+            </div>
+            <figcaption class="art-caption">
+              <span class="caption-pulse" aria-hidden="true"></span>
+              <span>让学过的词，慢慢沉淀成记忆</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="hero-foot" aria-label="产品特点">
+          <span>本地优先</span>
+          <span>间隔复习</span>
+          <span>离线朗读</span>
+          <span>免费开源</span>
+        </div>
+      </section>
+
+      <section class="section intro-section" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow eyebrow-light">STUDY AT YOUR PACE</p>
+          <h2 id="features-title">把注意力留给单词。</h2>
+          <p>简单清楚的学习流程，搭配可调整的词库与计划。</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-number">01</span>
+            <h3>复习优先</h3>
+            <p>先处理到期复习，再进入新词。每日计划与额度清楚显示，可按自己的安排调整。</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">02</span>
+            <h3>词库由你选择</h3>
+            <p>使用内置词库，导入自己的词表，或在多个词库之间调整参与选词的范围。</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">03</span>
+            <h3>断网也能学习</h3>
+            <p>内置词库与语音可离线使用。Android 和 Windows 都能朗读单词与例句。</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">04</span>
+            <h3>数据由你掌握</h3>
+            <p>学习记录保存在本地；需要跨设备时，可自行配置 GitHub 私有仓库加密同步。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section preview-section" id="preview" aria-labelledby="preview-title">
+        <div class="section-heading section-heading-row">
+          <div>
+            <p class="eyebrow eyebrow-light">A LOOK INSIDE</p>
+            <h2 id="preview-title">看看实际使用界面。</h2>
+          </div>
+          <p>以下为 Windows 桌面端截图，使用演示数据。</p>
+        </div>
+        <div class="screenshot-grid">
+          <figure class="screenshot-card">
+            <div class="screenshot-frame">
+              <img src="images/readme/windows-home.png" alt="彭式背单词 Windows 桌面端首页，显示今日任务、复习与新词安排" loading="lazy">
+            </div>
+            <figcaption><span>01</span> 首页 · 今日学习安排</figcaption>
+          </figure>
+          <figure class="screenshot-card">
+            <div class="screenshot-frame">
+              <img src="images/readme/windows-study.png" alt="彭式背单词 Windows 桌面端学习页，显示单词卡片与记忆进度" loading="lazy">
+            </div>
+            <figcaption><span>02</span> 学习页 · 专注当前词条</figcaption>
+          </figure>
+        </div>
+        <p class="preview-note">页面截图不包含真实用户的学习记录。</p>
+      </section>
+
+      <section class="download-section" id="download" aria-labelledby="download-title">
+        <div class="download-inner">
+          <div class="download-heading">
+            <div>
+              <p class="eyebrow">GET THE LATEST RELEASE</p>
+              <h2 id="download-title">从适合你的设备开始。</h2>
+              <p>免费获取 Android 与 Windows 版本。</p>
+            </div>
+            <div class="release-summary" aria-live="polite">
+              <span class="release-label">最新公开版本</span>
+              <strong id="latest-version">查看 GitHub Releases</strong>
+              <span id="release-date">版本信息来自公开仓库</span>
+            </div>
+          </div>
+          <div class="download-grid" id="download-grid">
+            <article class="download-card" data-download-card="apk">
+              <div class="download-card-top">
+                <span class="platform-icon android-icon" aria-hidden="true">A</span>
+                <span class="platform-label">ANDROID</span>
+              </div>
+              <h3>Android APK</h3>
+              <p>适用于 Android 8.0 及以上的 ARM64 手机。</p>
+              <a class="download-link" id="download-apk" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">
+                <span class="download-link-label">查看 APK 下载</span> <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+            <article class="download-card download-card-featured" data-download-card="msi">
+              <div class="download-card-top">
+                <span class="platform-icon windows-icon" aria-hidden="true">W</span>
+                <span class="platform-label">WINDOWS · RECOMMENDED</span>
+              </div>
+              <h3>Windows MSI</h3>
+              <p>适用于 Windows 10/11 x64，按安装向导完成安装。</p>
+              <a class="download-link" id="download-msi" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">
+                <span class="download-link-label">查看 MSI 下载</span> <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+            <article class="download-card" data-download-card="exe">
+              <div class="download-card-top">
+                <span class="platform-icon windows-icon" aria-hidden="true">W</span>
+                <span class="platform-label">WINDOWS</span>
+              </div>
+              <h3>Windows EXE</h3>
+              <p>Windows x64 的另一种安装包格式。</p>
+              <a class="download-link" id="download-exe" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">
+                <span class="download-link-label">查看 EXE 下载</span> <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          </div>
+          <div class="release-bottom">
+            <p id="api-status" role="status" aria-live="polite">版本和下载信息由 GitHub 公开 Release 提供。</p>
+            <div class="repo-stats">
+              <span>GitHub 星标 <strong id="repo-stars">—</strong></span>
+              <span>本版本下载 <strong id="release-downloads">—</strong></span>
+            </div>
+          </div>
+          <div class="release-links">
+            <a href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">最新 Release 页面 ↗</a>
+            <a href="https://github.com/Lissa3139/pengshi-words-public/releases">全部版本 ↗</a>
+            <a id="checksum-link" href="https://github.com/Lissa3139/pengshi-words-public/releases/latest" hidden>SHA256SUMS 校验文件 ↗</a>
+            <a href="https://github.com/Lissa3139/pengshi-words-public/blob/main/docs/user-guide.md">安装与使用指南 ↗</a>
+          </div>
+          <noscript>
+            <p class="noscript-note">启用 JavaScript 后可在此直接读取最新版本和附件；也可以打开 <a href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">GitHub 最新 Release</a> 查看下载。</p>
+          </noscript>
+        </div>
+      </section>
+
+      <section class="section developer-section" id="developers" aria-labelledby="developers-title">
+        <div class="developer-copy">
+          <p class="eyebrow eyebrow-light">BUILT IN THE OPEN</p>
+          <h2 id="developers-title">想一起把它做得更好？</h2>
+          <p>查看源码、了解项目结构，或通过贡献指南参与改进。提交问题时请勿附上个人数据库、学习备份、同步密码或访问令牌。</p>
+        </div>
+        <div class="developer-links">
+          <a href="https://github.com/Lissa3139/pengshi-words-public" target="_blank" rel="noreferrer"><span>源码仓库</span><b aria-hidden="true">↗</b></a>
+          <a href="https://github.com/Lissa3139/pengshi-words-public/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer"><span>参与开发</span><b aria-hidden="true">↗</b></a>
+          <a href="https://github.com/Lissa3139/pengshi-words-public/blob/main/docs/PROJECT_STRUCTURE.md" target="_blank" rel="noreferrer"><span>项目结构</span><b aria-hidden="true">↗</b></a>
+          <a href="https://github.com/Lissa3139/pengshi-words-public/blob/main/LICENSE" target="_blank" rel="noreferrer"><span>GPLv3 许可</span><b aria-hidden="true">↗</b></a>
+        </div>
+      </section>
+
+      <section class="thanks-section" aria-labelledby="thanks-title">
+        <div class="thanks-mark" aria-hidden="true">“</div>
+        <div>
+          <p class="eyebrow eyebrow-light">ACKNOWLEDGMENT</p>
+          <h2 id="thanks-title">致谢</h2>
+          <p>
+            感谢「默默背单词」的公开产品体验，为本项目的复习交互和学习统计呈现提供了设计参考。彭式背单词是独立项目，与「默默背单词」及其开发方不存在隶属、合作或授权关系；本致谢不代表对本项目的背书，也不构成对其代码、文案、图标或其他受保护内容的使用许可。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="#top">彭式背单词</a>
+      <span>免费开源 · GPLv3</span>
+      <a href="https://github.com/Lissa3139/pengshi-words-public/blob/main/docs/privacy.md" target="_blank" rel="noreferrer">隐私与数据说明 ↗</a>
+      <span>© <span id="current-year">2026</span> 彭式背单词</span>
+    </footer>
+  </body>
+</html>
