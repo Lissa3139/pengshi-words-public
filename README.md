@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/images/readme/hero-poster.png" alt="深蓝星点汇聚成彭式背单词标志的项目海报" width="100%">
-</p>
+[![彭式背单词项目海报：深蓝星点汇聚成项目标志](docs/images/readme/hero-poster.png)](https://lissa3139.github.io/pengshi-words-public/#preview)
 
 <h1 align="center">彭式背单词</h1>
 <p align="center"><strong>记一词，志更远。</strong></p>
@@ -8,6 +6,7 @@
 <p align="center">
   <a href="https://lissa3139.github.io/pengshi-words-public/">项目网站</a> ·
   <a href="#界面全览">界面全览</a> ·
+  <a href="https://lissa3139.github.io/pengshi-words-public/#preview">滑动浏览界面</a> ·
   <a href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">下载最新版</a> ·
   <a href="docs/github-sync.md">GitHub 同步教程</a> ·
   <a href="CONTRIBUTING.md">参与开发</a>
@@ -25,7 +24,7 @@
 
 ## 界面全览
 
-以下为 Android 与 Windows 应用的主要页面及统计视图。统计截图采用虚构演示记录，不含个人资料。可在 GitHub 页面向下滚动逐页浏览，点击截图可打开原图。
+想切换 Android / Windows 并左右滑动查看页面，可打开[交互式界面浏览](https://lissa3139.github.io/pengshi-words-public/#preview)。GitHub README 不支持运行轮播脚本，因此这里保留全部静态截图，方便向下浏览或点击查看原图。统计截图采用虚构演示记录，不含个人资料。
 
 ### Windows
 
