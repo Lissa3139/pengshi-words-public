@@ -5,12 +5,13 @@
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const revealGroupCount = 24;
-  const revealSeconds = 2.8;
+  const revealSpan = 0.22;
   const groups = Array.from({ length: revealGroupCount }, (_, index) => ({
-    startsAt: 0.8 + index * 0.82,
+    startsAt: 0.025 + index * 0.032,
     common: [],
     mint: [],
   }));
+  const finalPage = document.querySelector("#developers");
   let points = [];
   let logoMask = [];
   let width = 0;
@@ -21,6 +22,8 @@
   let startedAt = performance.now();
   let targetProgress = 0;
   let scrollProgress = 0;
+  let pageProgress = 0;
+  let illuminationProgress = 0;
   let pointer = null;
   let rippleStartedAt = 0;
 
@@ -104,7 +107,7 @@
         targetY: target.y,
         phase: random() * Math.PI * 2,
         drift: index % 7 === 0 ? 2.5 + random() * 5 : 0,
-        radius: 0.48 + random() * 0.82,
+        radius: 0.42 + random() * 0.62,
         large: index % 53 === 0,
       };
       (random() < 0.11 ? group.mint : group.common).push(point);
@@ -115,7 +118,16 @@
 
   function updateScrollProgress() {
     const maximum = document.documentElement.scrollHeight - window.innerHeight;
-    targetProgress = maximum > 0 ? clamp(window.scrollY / maximum) : 0;
+    pageProgress = maximum > 0 ? clamp(window.scrollY / maximum) : 0;
+    if (!finalPage || maximum <= 0) {
+      targetProgress = 0;
+      return;
+    }
+
+    const finalPageTop = window.scrollY + finalPage.getBoundingClientRect().top;
+    const finalPageStart = Math.max(0, finalPageTop - height * 0.78);
+    const clusterRange = maximum - finalPageStart;
+    targetProgress = clusterRange > 0 ? clamp((window.scrollY - finalPageStart) / clusterRange) : (pageProgress > 0.98 ? 1 : 0);
   }
 
   function resize() {
@@ -131,18 +143,18 @@
     draw(performance.now());
   }
 
-  function drawGroup(group, pointsInGroup, progress, seconds, isMint, logoSize, logoCenterY) {
+  function drawGroup(group, pointsInGroup, progress, illumination, seconds, isMint, logoSize, logoCenterY) {
     if (!pointsInGroup.length) return;
 
-    const reveal = reducedMotion.matches ? 1 : smoothstep((seconds - group.startsAt) / revealSeconds);
-    const alpha = (isMint ? 0.12 : 0.075) + reveal * (isMint ? 0.78 : 0.7);
-    const darkColor = isMint ? "#17463f" : "#526777";
-    const brightColor = isMint ? "#72f0d9" : "#c0d7df";
+    const reveal = smoothstep((illumination - group.startsAt) / revealSpan);
+    const alpha = (isMint ? 0.025 : 0.015) + reveal * (isMint ? 0.34 : 0.3);
+    const darkColor = isMint ? "#123c37" : "#394a56";
+    const brightColor = isMint ? "#61c4b1" : "#a2b8c2";
     const color = mixColor(darkColor, brightColor, reveal);
     context.beginPath();
     for (const point of pointsInGroup) {
-      const swayX = point.drift ? Math.sin(seconds * 0.45 + point.phase) * point.drift : 0;
-      const swayY = point.drift ? Math.cos(seconds * 0.34 + point.phase) * point.drift * 0.62 : 0;
+      const swayX = !reducedMotion.matches && point.drift ? Math.sin(seconds * 0.45 + point.phase) * point.drift : 0;
+      const swayY = !reducedMotion.matches && point.drift ? Math.cos(seconds * 0.34 + point.phase) * point.drift * 0.62 : 0;
       const scatteredX = point.x * width + swayX;
       const scatteredY = point.y * height + swayY;
       const targetX = width * 0.5 + (point.targetX - 0.5) * logoSize;
@@ -154,14 +166,15 @@
       context.arc(x, y, radius, 0, Math.PI * 2);
     }
     context.fillStyle = color;
-    context.globalAlpha = alpha * (1 - progress * 0.58);
+    context.globalAlpha = alpha;
     context.fill();
   }
 
   function draw(timestamp) {
     if (!width || !height) return;
 
-    const seconds = reducedMotion.matches ? 24 : Math.max(0, (timestamp - startedAt) / 1000);
+    const seconds = Math.max(0, (timestamp - startedAt) / 1000);
+    illuminationProgress = Math.max(illuminationProgress, reducedMotion.matches ? 1 : clamp(seconds / 7), pageProgress);
     const target = reducedMotion.matches ? 0 : targetProgress;
     scrollProgress += (target - scrollProgress) * (reducedMotion.matches ? 1 : 0.075);
     if (Math.abs(target - scrollProgress) < 0.001) scrollProgress = target;
@@ -172,8 +185,8 @@
 
     context.clearRect(0, 0, width, height);
     for (const group of groups) {
-      drawGroup(group, group.common, progress, seconds, false, logoSize, logoCenterY);
-      drawGroup(group, group.mint, progress, seconds, true, logoSize, logoCenterY);
+      drawGroup(group, group.common, progress, illuminationProgress, seconds, false, logoSize, logoCenterY);
+      drawGroup(group, group.mint, progress, illuminationProgress, seconds, true, logoSize, logoCenterY);
     }
     context.globalAlpha = 1;
 
