@@ -2,7 +2,7 @@
   color-scheme: light;
   --night: #07151b;
   --mint: #63e3cc;
-  --mist: #78969d;
+  --mist: #526b73;
   --paper: #f0f7f6;
   --white: #ffffff;
   --soft: #a7c0c1;
@@ -35,8 +35,14 @@ a {
 
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--mint);
+  outline: 3px solid #236e64;
   outline-offset: 4px;
+}
+
+.site-header a:focus-visible,
+.hero a:focus-visible,
+.download-section a:focus-visible {
+  outline-color: var(--mint);
 }
 
 .skip-link {
