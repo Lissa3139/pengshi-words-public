@@ -1,6 +1,7 @@
+<h1 align="center">彭式背单词</h1>
+
 [![彭式背单词项目海报：深蓝星点汇聚成项目标志](docs/images/readme/hero-poster.png)](https://lissa3139.github.io/pengshi-words-public/#preview)
 
-<h1 align="center">彭式背单词</h1>
 <p align="center"><strong>记一词，志更远。</strong></p>
 <p align="center">Android 与 Windows 背词应用 · 本地优先 · 可选同步</p>
 <p align="center">
@@ -46,21 +47,13 @@
 
 ### Android
 
-| 首页 | 词库 |
-| :---: | :---: |
-| <a href="docs/images/site/screens/android-home.png"><img src="docs/images/site/screens/android-home.png" alt="Android 首页" width="230"></a> | <a href="docs/images/site/screens/android-decks.png"><img src="docs/images/site/screens/android-decks.png" alt="Android 词库" width="230"></a> |
+| 首页 | 词库 | 选词仪表盘 | 学习 |
+| :---: | :---: | :---: | :---: |
+| <a href="docs/images/site/screens/android-home.png"><img src="docs/images/site/screens/android-home.png" alt="Android 首页" width="170"></a> | <a href="docs/images/site/screens/android-decks.png"><img src="docs/images/site/screens/android-decks.png" alt="Android 词库" width="170"></a> | <a href="docs/images/site/screens/android-selection.png"><img src="docs/images/site/screens/android-selection.png" alt="Android 选词仪表盘" width="170"></a> | <a href="docs/images/site/screens/android-study-answer.png"><img src="docs/images/site/screens/android-study-answer.png" alt="Android 学习页面" width="170"></a> |
 
-| 选词仪表盘 | 学习 |
-| :---: | :---: |
-| <a href="docs/images/site/screens/android-selection.png"><img src="docs/images/site/screens/android-selection.png" alt="Android 选词仪表盘" width="230"></a> | <a href="docs/images/site/screens/android-study-answer.png"><img src="docs/images/site/screens/android-study-answer.png" alt="Android 学习页面" width="230"></a> |
-
-| 遗忘曲线 | 学习情况 |
-| :---: | :---: |
-| <a href="docs/images/site/screens/android-stats-forgetting.png"><img src="docs/images/site/screens/android-stats-forgetting.png" alt="Android 遗忘曲线统计" width="230"></a> | <a href="docs/images/site/screens/android-stats-learning.png"><img src="docs/images/site/screens/android-stats-learning.png" alt="Android 学习情况统计" width="230"></a> |
-
-| 记忆持久度 | 设置 |
-| :---: | :---: |
-| <a href="docs/images/site/screens/android-stats-memory.png"><img src="docs/images/site/screens/android-stats-memory.png" alt="Android 记忆持久度统计" width="230"></a> | <a href="docs/images/site/screens/android-settings.png"><img src="docs/images/site/screens/android-settings.png" alt="Android 设置" width="230"></a> |
+| 遗忘曲线 | 学习情况 | 记忆持久度 | 设置 |
+| :---: | :---: | :---: | :---: |
+| <a href="docs/images/site/screens/android-stats-forgetting.png"><img src="docs/images/site/screens/android-stats-forgetting.png" alt="Android 遗忘曲线统计" width="170"></a> | <a href="docs/images/site/screens/android-stats-learning.png"><img src="docs/images/site/screens/android-stats-learning.png" alt="Android 学习情况统计" width="170"></a> | <a href="docs/images/site/screens/android-stats-memory.png"><img src="docs/images/site/screens/android-stats-memory.png" alt="Android 记忆持久度统计" width="170"></a> | <a href="docs/images/site/screens/android-settings.png"><img src="docs/images/site/screens/android-settings.png" alt="Android 设置" width="170"></a> |
 
 ## 普通用户：下载与安装
 
