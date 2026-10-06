@@ -45,7 +45,10 @@ class DesktopWordPoolStore(private val path: Path) {
         if (aliases.isEmpty()) return
         val current = load()
         val remapped = current.includedDeckIds.mapTo(linkedSetOf()) { aliases[it] ?: it }
-        save(current.copy(includedDeckIds = remapped))
+        val remappedWeights = current.deckWeights.entries
+            .groupBy { aliases[it.key] ?: it.key }
+            .mapValues { (_, entries) -> entries.sumOf { it.value }.coerceAtMost(100) }
+        save(current.copy(includedDeckIds = remapped, deckWeights = remappedWeights))
     }
 
     private fun parseIds(value: String?): Set<Long> = value.orEmpty()

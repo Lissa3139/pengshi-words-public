@@ -21,7 +21,6 @@ class DesktopSeedLoader(
     private val onDeckAliases: (Map<Long, Long>) -> Unit = {},
 ) {
     suspend fun seedIfNeeded(): ImportResult {
-        onDeckAliases(importRepository.repairDuplicateCet6Decks())
         val preview = openSeedResource().use { input ->
             DefaultWordImportParser().parse(input, ImportFormat.CSV)
         }
@@ -36,12 +35,13 @@ class DesktopSeedLoader(
                 row.copy(frequencyRank = Cet6FrequencyRanks.rank(row.spelling))
             },
         )
-        val snapshot = snapshotGateway.snapshot()
-        val existingWords = snapshot.words.associateBy { it.normalizedSpelling }
-        val wordsById = snapshot.words.associateBy { it.id }
         val seedSpellings = rankedPreview.rows.mapTo(linkedSetOf()) {
             it.spelling.trim().lowercase(Locale.ROOT)
         }
+        onDeckAliases(importRepository.repairDuplicateCet6Decks(seedSpellings))
+        val snapshot = snapshotGateway.snapshot()
+        val existingWords = snapshot.words.associateBy { it.normalizedSpelling }
+        val wordsById = snapshot.words.associateBy { it.id }
         val cet6Deck = snapshot.decks.firstOrNull {
             it.sourceType == DeckSourceType.BUILTIN &&
                 it.sourceFileName == DesktopImportRepository.CET6_DECK_SOURCE_FILE
@@ -84,6 +84,10 @@ class DesktopSeedLoader(
         val preview = openSeedResource().use { input ->
             DefaultWordImportParser().parse(input, ImportFormat.CSV)
         }
+        val seedSpellings = preview.rows.mapTo(linkedSetOf()) {
+            it.spelling.trim().lowercase(Locale.ROOT)
+        }
+        onDeckAliases(importRepository.repairDuplicateCet6Decks(seedSpellings))
         contentRepository.reconcileCet6SourceMetadata(preview)
         contentRepository.mergeBundledExamples(openBundledExamples())
     }

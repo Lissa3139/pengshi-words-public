@@ -572,9 +572,9 @@ private fun WordDetail(
                         .filter(String::isNotBlank)
                         .forEachIndexed { index, meaning -> Text("${index + 1}. $meaning") }
                     word.senses.forEach { sense ->
-                        Text("${sense.partOfSpeech.takeIf(String::isNotBlank)?.let { "$it · " }.orEmpty()}${sense.definitionCn}")
                         Text("释义来源：${sense.definitionSource}", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${sense.partOfSpeech.takeIf(String::isNotBlank)?.let { "$it · " }.orEmpty()}${sense.definitionCn}")
                     }
                 }
             }

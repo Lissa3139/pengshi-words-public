@@ -31,6 +31,7 @@ import com.pengshi.words.model.StudyLogRepository
 import com.pengshi.words.model.StudyMode
 import com.pengshi.words.model.Word
 import com.pengshi.words.model.WordSense
+import com.pengshi.words.model.sameMeaningContent
 import com.pengshi.words.model.wordSenseKey
 import com.pengshi.words.model.sourceLabelNeedsUpgrade
 import com.pengshi.words.model.normalizeDictionaryText
@@ -107,6 +108,42 @@ class RoomDailyPlanRepository(
             plan.copy(id = planId)
         }
 
+    /** Replaces only an untouched automatic plan while applying its canonical remote lock. */
+    suspend fun replaceUnstartedPlanFromSync(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan =
+        database.withTransaction {
+            require(plan.id > 0) { "An existing plan id is required" }
+            DailyQuota.requireValid(plan.quota)
+            require(entries.count { it.item.source != com.pengshi.words.model.PlanSource.EXTRA } <= plan.quota) {
+                "Daily plan cannot contain more than its locked quota"
+            }
+            val dao = database.dailyPlanDao()
+            val persistedPlan = requireNotNull(dao.getPlan(plan.id)) { "Daily plan no longer exists" }
+            require(persistedPlan.localDate == plan.localDate) { "Daily plan date changed during sync" }
+            val oldItems = dao.getItemsForPlan(plan.id)
+            val oldEvents = dao.getEventsForItems(oldItems.map { it.id }).groupBy { it.dailyPlanItemId }
+            require(oldItems.all { item ->
+                item.sourceType in setOf(com.pengshi.words.model.PlanSource.NEW, com.pengshi.words.model.PlanSource.DUE_REVIEW) &&
+                    item.status == com.pengshi.words.model.DailyItemStatus.PENDING &&
+                    oldEvents[item.id].orEmpty().let { events ->
+                        events.isNotEmpty() && events.all {
+                            it.status == com.pengshi.words.model.IntradayEventStatus.PENDING && it.feedback == null
+                        }
+                    }
+            }) { "Only an untouched automatic plan can be replaced from sync" }
+            oldItems.takeIf { it.isNotEmpty() }?.let { items ->
+                val itemIds = items.map { it.id }
+                dao.deleteEventsForItems(itemIds)
+                dao.deleteItems(itemIds)
+            }
+            entries.forEach { entry -> require(entry.item.wordId == entry.initialEvent.wordId) }
+            dao.updatePlan(plan.copy(id = persistedPlan.id).toEntity())
+            if (entries.isNotEmpty()) {
+                val itemIds = dao.insertItems(entries.map { it.item.toEntity(persistedPlan.id) })
+                dao.insertEvents(entries.mapIndexed { index, entry -> entry.initialEvent.toEntity(itemIds[index]) })
+            }
+            plan.copy(id = persistedPlan.id)
+        }
+
     suspend fun appendToPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan =
         database.withTransaction {
             require(plan.id > 0) { "An existing plan id is required" }
@@ -149,11 +186,12 @@ class RoomDailyPlanRepository(
             plan
         }
 
-    suspend fun replaceUnseenNewItems(
+    suspend fun replaceUnseenAutomaticItems(
         plan: DailyPlan,
         removeItemIds: Set<Long>,
         entries: List<DailyPlanEntry>,
         now: Instant,
+        reason: String = "due-review-priority",
     ): DailyPlan = database.withTransaction {
         require(plan.id > 0) { "An existing plan id is required" }
         val dao = database.dailyPlanDao()
@@ -164,13 +202,14 @@ class RoomDailyPlanRepository(
         val removedItems = persistedItems.filter { it.id in removeItemIds }
         require(removedItems.size == removeItemIds.size) { "Every replacement item must belong to the plan" }
         removedItems.forEach { item ->
-            require(item.sourceType == com.pengshi.words.model.PlanSource.NEW) {
-                "Only automatic NEW items can be replaced: ${item.id}"
+            require(item.sourceType == com.pengshi.words.model.PlanSource.NEW ||
+                item.sourceType == com.pengshi.words.model.PlanSource.DUE_REVIEW) {
+                "Only automatic review or new items can be replaced: ${item.id}"
             }
             val events = persistedEventsByItemId[item.id].orEmpty()
             require(item.status == com.pengshi.words.model.DailyItemStatus.PENDING && events.isNotEmpty() &&
                 events.all { it.status == com.pengshi.words.model.IntradayEventStatus.PENDING && it.feedback == null }) {
-                "Only unseen NEW items can be replaced: ${item.id}"
+                "Only unseen automatic items can be replaced: ${item.id}"
             }
         }
         val retainedEntries = persistedItems.filterNot { it.id in removeItemIds }.mapNotNull { item ->
@@ -196,8 +235,10 @@ class RoomDailyPlanRepository(
         val actualMainCount = persistedItems.count {
             it.id !in removeItemIds && it.sourceType != com.pengshi.words.model.PlanSource.EXTRA
         } + entries.count { it.item.source != com.pengshi.words.model.PlanSource.EXTRA }
-        require(actualMainCount <= maxOf(persistedPlanQuota, plan.quota)) {
-            "Daily plan cannot contain more items than its existing or updated quota"
+        if (entries.isNotEmpty()) {
+            require(actualMainCount <= maxOf(persistedPlanQuota, plan.quota)) {
+                "Daily plan cannot contain more items than its existing or updated quota"
+            }
         }
         val updatedPlan = plan.copy(
             plannedUniqueWordCount = actualMainCount,
@@ -220,7 +261,7 @@ class RoomDailyPlanRepository(
                     removedItemKeys = removedWordKeys,
                     oldPlanVersion = oldPlanVersion,
                     newPlanVersion = oldPlanVersion + 1,
-                    reason = "due-review-priority",
+                    reason = reason,
                 ),
                 now,
             )
@@ -416,12 +457,13 @@ class RoomStudySessionRepository(
         planRepository.getNewCandidates(mode, now)
     override suspend fun createPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan = planRepository.createPlan(plan, entries)
     override suspend fun appendToPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan = planRepository.appendToPlan(plan, entries)
-    override suspend fun replaceUnseenNewItems(
+    override suspend fun replaceUnseenAutomaticItems(
         plan: DailyPlan,
         removeItemIds: Set<Long>,
         entries: List<DailyPlanEntry>,
         now: Instant,
-    ): DailyPlan = planRepository.replaceUnseenNewItems(plan, removeItemIds, entries, now)
+        reason: String,
+    ): DailyPlan = planRepository.replaceUnseenAutomaticItems(plan, removeItemIds, entries, now, reason)
     override suspend fun resetTodayReview(localDate: LocalDate, now: Instant): Int = planRepository.resetTodayReview(localDate, now)
     override suspend fun submitFeedback(eventId: Long, transform: (FeedbackContext) -> FeedbackTransaction): FeedbackTransaction = studyRepository.submitFeedback(eventId, transform)
     override suspend fun submitFeedback(
@@ -788,7 +830,9 @@ class RoomStudyDataSnapshotGateway(private val database: PengshiDatabase) : Stud
         if (definition.isBlank()) return
         val normalizedKey = wordSenseKey(partOfSpeech, definition)
         val cleanSource = source.trim().ifBlank { SOURCE_UNVERIFIED }
-        if (normalizedKey == wordSenseKey(word.partOfSpeech, word.definitionCn)) {
+        if (normalizedKey == wordSenseKey(word.partOfSpeech, word.definitionCn) ||
+            sameMeaningContent(word.definitionCn, definition)
+        ) {
             if (sourceLabelNeedsUpgrade(word.definitionSource, cleanSource)) {
                 database.wordDao().update(word.copy(definitionSource = cleanSource))
             }

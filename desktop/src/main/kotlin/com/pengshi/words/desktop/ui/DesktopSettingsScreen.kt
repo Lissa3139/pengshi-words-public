@@ -102,7 +102,7 @@ fun DesktopSettingsScreen(
                     Text("保存额度")
                 }
             }
-            Text("保存后立即调整今天尚未开始的自动新词；已经开始或完成的学习、手动选词和额外词会保留。",
+            Text("提高额度时，未完成的复习会立即补入计划；复习完成后可按新额度选择新词。降低额度时优先移除尚未开始的新词，再调整未开始的复习词。已开始、完成、手动选择和额外词会保留。",
                 modifier = Modifier.padding(top = 6.dp), color = DesktopPalette.muted)
             Button(onClick = onSwitchMode, modifier = Modifier.padding(top = 12.dp)) {
                 Text("默认模式：${if (defaultMode == StudyMode.EN_TO_CN) "英译中" else "中译英"}")

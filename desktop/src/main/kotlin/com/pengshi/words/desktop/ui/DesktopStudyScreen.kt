@@ -50,6 +50,7 @@ import com.pengshi.words.model.PlanSource
 import com.pengshi.words.model.StudyMode
 import com.pengshi.words.model.Word
 import com.pengshi.words.model.WordSense
+import com.pengshi.words.model.distinctSupplementaryMeanings
 import com.pengshi.words.model.normalizeDictionaryText
 import com.pengshi.words.speech.SpeechVoiceOption
 
@@ -67,7 +68,8 @@ data class DesktopStudyViewState(
     }
     val remainingCount: Int get() = session.stageRemainingCount()
     val prompt: String get() = if (session.currentEvent?.mode == StudyMode.CN_TO_EN) {
-        (listOf(word.definitionCn) + session.currentWordSenses.map { it.definitionCn }).filter(String::isNotBlank).joinToString("；")
+        (listOf(word.definitionCn) + distinctSupplementaryMeanings(word.definitionCn, session.currentWordSenses)
+            .map { it.definitionCn }).filter(String::isNotBlank).joinToString("；")
     } else word.spelling
 
     companion object {
@@ -152,7 +154,7 @@ fun DesktopStudyScreen(
                             modifier = Modifier.padding(top = 8.dp))
                         TextButton(onClick = onSpeakWord) { Text("🔊 朗读单词") }
                     }
-                    view.session.currentWordSenses.forEach { sense ->
+                    distinctSupplementaryMeanings(view.word.definitionCn, view.session.currentWordSenses).forEach { sense ->
                         val part = sense.partOfSpeech.takeIf(String::isNotBlank)?.let { "$it · " }.orEmpty()
                         Text("$part${sense.definitionCn}", style = MaterialTheme.typography.body1,
                             modifier = Modifier.padding(top = 6.dp))
@@ -253,7 +255,7 @@ fun DesktopWordDetailsPanel(
                 Text(details.word.definitionCn.normalizeDictionaryText(), color = DesktopPalette.ink)
                 Text("释义来源：${details.word.definitionSource}", color = DesktopPalette.muted,
                     style = MaterialTheme.typography.caption)
-                details.senses.forEach { sense ->
+                distinctSupplementaryMeanings(details.word.definitionCn, details.senses).forEach { sense ->
                     Text("${sense.partOfSpeech.takeIf(String::isNotBlank)?.let { "$it · " }.orEmpty()}${sense.definitionCn}", color = DesktopPalette.ink)
                     Text("释义来源：${sense.definitionSource}", color = DesktopPalette.muted,
                         style = MaterialTheme.typography.caption)

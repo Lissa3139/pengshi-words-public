@@ -241,6 +241,8 @@ interface WordSenseDao {
     suspend fun getAll(): List<WordSenseEntity>
     @Query("SELECT * FROM word_senses WHERE wordId = :wordId AND normalizedKey = :normalizedKey LIMIT 1")
     suspend fun getByKey(wordId: Long, normalizedKey: String): WordSenseEntity?
+    @Query("DELETE FROM word_senses WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
     @Query("DELETE FROM word_senses")
     suspend fun deleteAll()
 }
@@ -313,6 +315,8 @@ interface DeckDao {
     suspend fun getBySourceFileName(sourceFileName: String): DeckEntity?
     @Query("SELECT * FROM decks WHERE id = :deckId LIMIT 1")
     suspend fun getById(deckId: Long): DeckEntity?
+    @Query("DELETE FROM decks WHERE id = :deckId")
+    suspend fun deleteById(deckId: Long)
     @Query("SELECT * FROM deck_words ORDER BY deckId, wordId")
     suspend fun getAllDeckWords(): List<DeckWordEntity>
     @Query("SELECT * FROM deck_words WHERE deckId IN (:deckIds) ORDER BY deckId, wordId")

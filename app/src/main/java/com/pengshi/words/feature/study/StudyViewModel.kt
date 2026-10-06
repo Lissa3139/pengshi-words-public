@@ -8,6 +8,7 @@ import com.pengshi.words.domain.stageRemainingCount
 import com.pengshi.words.model.Feedback
 import com.pengshi.words.model.PlanSource
 import com.pengshi.words.model.StudyMode
+import com.pengshi.words.model.distinctSupplementaryMeanings
 import com.pengshi.words.model.normalizeDictionaryText
 import com.pengshi.words.speech.SpeechEngine
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +64,8 @@ class StudyViewModel(
 
 fun StudySessionState.toScreenState(): StudyScreenState {
     val word = requireNotNull(currentWord) { "A study session must have a current word" }
-    val completeMeaning = (listOf(word.definitionCn) + currentWordSenses.map { it.definitionCn })
+    val additionalSenses = distinctSupplementaryMeanings(word.definitionCn, currentWordSenses)
+    val completeMeaning = (listOf(word.definitionCn) + additionalSenses.map { it.definitionCn })
         .filter(String::isNotBlank).joinToString("；")
     val prompt = if (currentEvent?.mode == StudyMode.CN_TO_EN) completeMeaning else word.spelling
     val answer = if (currentEvent?.mode == StudyMode.CN_TO_EN) word.spelling else word.definitionCn
@@ -77,7 +79,7 @@ fun StudySessionState.toScreenState(): StudyScreenState {
         answer = answer,
         definitionCn = word.definitionCn,
         definitionSource = word.definitionSource,
-        additionalMeanings = currentWordSenses.map { WordMeaningUi(it.partOfSpeech, it.definitionCn, it.definitionSource) },
+        additionalMeanings = additionalSenses.map { WordMeaningUi(it.partOfSpeech, it.definitionCn, it.definitionSource) },
         mnemonic = word.mnemonic,
         phonetic = word.phonetic,
         partOfSpeech = word.partOfSpeech.ifBlank { inferPartOfSpeech(word.definitionCn) },

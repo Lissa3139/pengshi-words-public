@@ -74,13 +74,9 @@ class DesktopImportRepository(
         }
     }
 
-    /**
-     * Older snapshots could contain the CET6 pack twice: once as the imported
-     * `imported.csv` deck and once as the canonical `words.csv` deck.  The
-     * normalized word dictionary already deduplicates the words, so keep one
-     * official deck and merge only when both decks point to the same spelling set.
-     */
-    fun repairDuplicateCet6Decks(): Map<Long, Long> = database.transaction { connection ->
+    /** Collapse legacy CET6 aliases into the user-facing six-level core deck. */
+    fun repairDuplicateCet6Decks(expectedSpellings: Set<String>): Map<Long, Long> = database.transaction { connection ->
+        if (expectedSpellings.isEmpty()) return@transaction emptyMap()
         val candidates = connection.queryList(
             """SELECT id, name, source_type, source_file_name FROM decks
                 WHERE source_type = ? AND (source_file_name IN (?, ?) OR name IN (?, ?))
@@ -90,7 +86,7 @@ class DesktopImportRepository(
                 statement.setString(2, CET6_DECK_SOURCE_FILE)
                 statement.setString(3, "imported.csv")
                 statement.setString(4, CET6_DECK_NAME)
-                statement.setString(5, "六级核心词汇")
+                statement.setString(5, LEGACY_CET6_DECK_NAME)
             },
         ) { row ->
             Cet6DeckCandidate(
@@ -99,8 +95,6 @@ class DesktopImportRepository(
                 sourceFileName = row.getString("source_file_name"),
             )
         }
-        if (candidates.size < 2) return@transaction emptyMap()
-
         val linksByDeck = candidates.associate { candidate ->
             candidate.id to connection.queryList(
                 "SELECT w.normalized_spelling FROM deck_words dw JOIN words w ON w.id = dw.word_id WHERE dw.deck_id = ? ORDER BY w.normalized_spelling",
@@ -108,16 +102,14 @@ class DesktopImportRepository(
                 { it.getString(1) },
             ).toSet()
         }
-        val canonical = candidates.firstOrNull { it.sourceFileName == CET6_DECK_SOURCE_FILE && it.name == CET6_DECK_NAME }
-            ?: candidates.firstOrNull { it.sourceFileName == CET6_DECK_SOURCE_FILE }
-            ?: candidates.firstOrNull { it.name == CET6_DECK_NAME }
-            ?: return@transaction emptyMap()
-        val canonicalSpellings = linksByDeck.getValue(canonical.id)
-        if (canonicalSpellings.isEmpty()) return@transaction emptyMap()
+        val matching = candidates.filter { linksByDeck[it.id] == expectedSpellings }
+        if (matching.isEmpty()) return@transaction emptyMap()
+        val canonical = matching.firstOrNull { it.name == CET6_DECK_NAME }
+            ?: matching.firstOrNull { it.sourceFileName == CET6_DECK_SOURCE_FILE }
+            ?: matching.first()
 
         val aliases = linkedMapOf<Long, Long>()
-        candidates.filter { it.id != canonical.id }.forEach { duplicate ->
-            if (linksByDeck.getValue(duplicate.id) != canonicalSpellings) return@forEach
+        matching.filter { it.id != canonical.id }.forEach { duplicate ->
             connection.executeUpdate(
                 """INSERT OR IGNORE INTO deck_words (deck_id, word_id, position, added_at)
                     SELECT ?, word_id, position, added_at FROM deck_words WHERE deck_id = ?""".trimIndent(),
@@ -128,7 +120,9 @@ class DesktopImportRepository(
             connection.executeUpdate("DELETE FROM decks WHERE id = ?") { it.setLong(1, duplicate.id) }
             aliases[duplicate.id] = canonical.id
         }
-        if (aliases.isNotEmpty()) {
+        if (canonical.name != CET6_DECK_NAME || canonical.sourceFileName != CET6_DECK_SOURCE_FILE ||
+            linksByDeck.getValue(canonical.id).size != expectedSpellings.size || aliases.isNotEmpty()
+        ) {
             connection.executeUpdate(
                 """UPDATE decks SET name = ?, source_file_name = ?, word_count =
                     (SELECT COUNT(*) FROM deck_words WHERE deck_id = ?), updated_at = ? WHERE id = ?""".trimIndent(),
@@ -473,7 +467,8 @@ class DesktopImportRepository(
     }
 
     companion object {
-        const val CET6_DECK_NAME = "CET6"
+        const val CET6_DECK_NAME = "六级核心词汇"
+        private const val LEGACY_CET6_DECK_NAME = "CET6"
         const val CET6_DECK_SOURCE_FILE = "words.csv"
     }
 }

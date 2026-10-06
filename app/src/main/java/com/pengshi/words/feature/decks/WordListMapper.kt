@@ -7,6 +7,7 @@ import com.pengshi.words.model.DeckWord
 import com.pengshi.words.model.ExampleSentence
 import com.pengshi.words.model.Word
 import com.pengshi.words.model.WordSense
+import com.pengshi.words.model.distinctSupplementaryMeanings
 import com.pengshi.words.model.normalizeDictionaryText
 
 internal fun buildWordListItems(
@@ -21,7 +22,12 @@ internal fun buildWordListItems(
     val examplesByWordId = examples
         .sortedWith(compareBy<ExampleSentence>({ it.wordId }, { it.sortOrder }, { it.id }))
         .groupBy { it.wordId }
-    val sensesByWordId = senses.sortedWith(compareBy<WordSense>({ it.wordId }, { it.sortOrder }, { it.id })).groupBy { it.wordId }
+    val sensesByWordId = senses
+        .sortedWith(compareBy<WordSense>({ it.wordId }, { it.sortOrder }, { it.id }))
+        .groupBy { it.wordId }
+        .mapValues { (wordId, wordSenses) ->
+            distinctSupplementaryMeanings(wordsById[wordId]?.definitionCn.orEmpty(), wordSenses)
+        }
 
     fun Word.toUi(deckId: Long? = null): WordListItemUi = WordListItemUi(
         id = id,
@@ -52,7 +58,11 @@ internal fun buildWordListItems(
     val examplesByWordId = examples
         .sortedWith(compareBy<ExampleSentenceEntity>({ it.wordId }, { it.sortOrder }, { it.id }))
         .groupBy { it.wordId }
+    val definitionsByWordId = rows.associate { it.id to it.definitionCn }
     val sensesByWordId = senses.groupBy { it.wordId }
+        .mapValues { (wordId, wordSenses) ->
+            distinctSupplementaryMeanings(definitionsByWordId[wordId].orEmpty(), wordSenses)
+        }
     return rows.map { row ->
         WordListItemUi(
             id = row.id,

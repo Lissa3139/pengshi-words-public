@@ -126,7 +126,7 @@ class ReconcileDailyPlanUseCase(
                 ),
             )
         }
-        val updatedPlan = repository.replaceUnseenNewItems(
+        val updatedPlan = repository.replaceUnseenAutomaticItems(
             plan = plan.copy(
                 plannedUniqueWordCount = fixedMainCount - removedItems.size + entries.size,
                 status = com.pengshi.words.model.DailyPlanStatus.IN_PROGRESS,

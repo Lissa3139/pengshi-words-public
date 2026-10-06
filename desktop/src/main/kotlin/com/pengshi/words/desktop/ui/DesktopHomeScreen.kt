@@ -88,9 +88,12 @@ fun DesktopHomeScreen(
         Text("复习优先，完成后再进入新词。", color = DesktopPalette.muted)
         DesktopPanel(Modifier.fillMaxWidth()) {
             Text("今日任务", style = MaterialTheme.typography.h6, fontWeight = FontWeight.SemiBold)
-            Text("${state.completedUniqueWordCount} / ${state.quota} 个单词",
+            val progressTarget = maxOf(state.quota, state.plannedUniqueWordCount)
+            Text("${state.completedUniqueWordCount} / $progressTarget 个单词",
                 style = MaterialTheme.typography.h3,
                 modifier = Modifier.padding(top = 14.dp, bottom = 8.dp))
+            Text("每日额度 ${state.quota}  ·  今日计划 ${state.plannedUniqueWordCount} 个单词",
+                color = DesktopPalette.muted)
             Text("到期复习 ${state.dueCount}  ·  可学新词 ${state.availableNewCount}", color = DesktopPalette.muted)
             Divider(Modifier.padding(vertical = 22.dp), color = DesktopPalette.line)
             state.progressLabels.forEachIndexed { index, label ->

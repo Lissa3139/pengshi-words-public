@@ -305,16 +305,16 @@ private fun MeaningSection(state: StudyScreenState) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                 Text(state.partOfSpeech?.ifBlank { "词义" } ?: "词义", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("释义来源：${state.definitionSource}", style = MaterialTheme.typography.bodySmall)
                     meanings.forEachIndexed { index, meaning ->
                         Text("${index + 1}  $meaning", style = MaterialTheme.typography.titleMedium)
                     }
-                    Text("释义来源：${state.definitionSource}", style = MaterialTheme.typography.bodySmall)
                     state.additionalMeanings.forEachIndexed { index, sense ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.padding(top = 7.dp)) {
                             Text("补充释义 ${index + 1}${sense.partOfSpeech.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty()}",
                                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            Text(sense.definitionCn, style = MaterialTheme.typography.titleSmall)
                             Text("释义来源：${sense.source}", style = MaterialTheme.typography.bodySmall)
+                            Text(sense.definitionCn, style = MaterialTheme.typography.titleSmall)
                         }
                     }
                 }

@@ -61,6 +61,16 @@ class DesktopPersonalSettingsStore(private val path: Path) {
         ).use { properties.store(it, "PengshiWords synchronized personal preferences") }
     }
 
+    fun replaceDeckIds(aliases: Map<Long, Long>): BackupSettingsSnapshot {
+        if (aliases.isEmpty()) return load()
+        val current = load()
+        val remapped = current.copy(
+            includedDeckIds = current.includedDeckIds.mapTo(linkedSetOf()) { aliases[it] ?: it },
+        )
+        if (remapped != current) save(remapped)
+        return remapped
+    }
+
     private companion object {
         const val DAILY_QUOTA = "dailyQuota"
         const val DEFAULT_MODE = "defaultMode"

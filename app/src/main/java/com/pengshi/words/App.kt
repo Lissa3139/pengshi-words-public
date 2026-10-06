@@ -90,6 +90,7 @@ import com.pengshi.words.model.FeedbackUndoToken
 import com.pengshi.words.model.PlanSource
 import com.pengshi.words.model.isNewWord
 import com.pengshi.words.model.StudyMode
+import com.pengshi.words.model.sameMeaningContent
 import com.pengshi.words.model.PersonalWordInput
 import com.pengshi.words.model.BatchImportSources
 import com.pengshi.words.importer.withBatchSources
@@ -328,6 +329,7 @@ fun App() {
 
     var homeState by remember(container) { mutableStateOf(container.cachedHomeState() ?: HomeUiState()) }
     var studyState by remember { mutableStateOf<StudyScreenState?>(null) }
+    var studySessionDate by remember { mutableStateOf<LocalDate?>(null) }
     var studyTransitionMessage by remember { mutableStateOf<String?>(null) }
     var newWordChoiceRequest by remember { mutableStateOf(0) }
     var studyCompletionRequest by remember { mutableStateOf(0) }
@@ -482,6 +484,15 @@ fun App() {
             settingsMessage = completionMessage
 
             try {
+                val syncedQuota = withContext(Dispatchers.IO) { container.savedSettings().dailyQuota }
+                settingsViewModel.replaceState(settingsViewModel.state.copy(dailyQuota = syncedQuota))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Keep the sync result visible if refreshing the cached settings state fails.
+            }
+
+            try {
                 refreshCachesAfterSync(result)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -528,7 +539,15 @@ fun App() {
             seedIfNeeded = { withContext(Dispatchers.IO) { container.runStudyOperation { container.seedIfNeeded() } } },
             loadHome = { withContext(Dispatchers.IO) { container.homeState() } },
             loadSettings = { withContext(Dispatchers.IO) { container.savedSettings() } },
-            resumeSession = { null },
+            resumeSession = {
+                withContext(Dispatchers.IO) {
+                    val today = LocalDate.now()
+                    container.runStudyOperation {
+                        if (container.repository.getPlan(today) == null) null
+                        else container.resume.resumeDailyStudy(today, Instant.now())
+                    }
+                }
+            },
             writeBackup = { container.writeAutomaticBackup() },
             hasSyncConfiguration = { container.hasSyncConfiguration() },
             syncNow = { runSyncWithFeedback() },
@@ -544,6 +563,7 @@ fun App() {
         resetHistory: Boolean = false,
         historyEntry: StudyHistoryEntry? = null,
     ) {
+        studySessionDate = session.plan.localDate
         val next = session.currentItem?.let { item ->
             session.toScreenState().copy(isFavorite = container.isFavorite(item.wordId))
         }
@@ -611,6 +631,11 @@ fun App() {
                     homeState = state.initial.home
                     settingsViewModel.replaceState(state.initial.settings)
                     settingsViewModel.setVoiceCatalog(container.speech.voiceCatalog.value)
+                    if (studyState == null) {
+                        state.initial.resumableSession?.let { session ->
+                            presentSession(session, resetHistory = true)
+                        }
+                    }
                     if (!speechInitializationStarted) {
                         speechInitializationStarted = true
                         val voices = container.speech.availableVoices()
@@ -810,7 +835,7 @@ fun App() {
             studyState = studyState,
             studyTransitionMessage = studyTransitionMessage,
             onStartStudy = { mode ->
-                studyTransitionMessage = "正在准备今日学习…"
+                studyTransitionMessage = if (studySessionDate == LocalDate.now()) null else "正在准备今日学习…"
                 scope.launch {
                     try {
                         val session = withContext(Dispatchers.IO) {
@@ -925,7 +950,7 @@ fun App() {
                             try {
                                 withContext(Dispatchers.IO) { container.updateDailyQuota(action.quota) }
                                 settingsViewModel.replaceState(container.savedSettings())
-                                settingsMessage = "每日额度已保存；今天尚未开始的自动新词已按新额度调整。"
+                                settingsMessage = "每日额度已保存；今天未开始的新词和复习词已按优先级调整。"
                                 refreshHomeState()
                                 runSyncWithFeedback()
                             } catch (failure: Exception) {
@@ -1006,12 +1031,13 @@ fun App() {
             settingsMessage = settingsMessage,
             onStudyAction = { action ->
                 when (action) {
-                    StudyAction.RevealAnswer -> studyState?.let {
+                    StudyAction.RevealAnswer -> studyState?.let { current ->
+                        studyState = current.copy(isAnswerRevealed = true, feedbackEnabled = true)
                         container.speech.stop()
                         val texts = buildList {
-                            if (settingsViewModel.state.autoPlayWord) add(it.englishWord.ifBlank { it.prompt })
+                            if (settingsViewModel.state.autoPlayWord) add(current.englishWord.ifBlank { current.prompt })
                             if (settingsViewModel.state.autoPlaySentence) {
-                                addAll(SpeechTextPolicy.firstSentence(it.examples.map { example -> example.sentenceEn }))
+                                addAll(SpeechTextPolicy.firstSentence(current.examples.map { example -> example.sentenceEn }))
                             }
                         }
                         container.speech.speakSequence(texts, settingsViewModel.state.speechRate)
@@ -1192,7 +1218,7 @@ private class AppContainer(private val context: Context) {
                 emptyEligibleWordSetMeansNoWords = true,
             ),
     )
-    private val adjustDailyQuota = AdjustDailyQuotaUseCase(repository, start)
+    private val adjustDailyQuota = AdjustDailyQuotaUseCase(repository, start, scheduler)
     val submit = SubmitFeedbackUseCase(repository, scheduler, start)
     val addNewWords = AddNewWordsUseCase(
         repository = repository,
@@ -1223,13 +1249,36 @@ private class AppContainer(private val context: Context) {
 
     private suspend fun applyRemoteEvent(event: SyncEventRecord): Boolean {
         val v2Payload = runCatching { SyncPayloadV2.decode(event.payload) }.getOrNull()
-        if (v2Payload != null) {
+        if (v2Payload is PlanLockedV2 || v2Payload is PlanReconciledV2) {
+            val planKey = when (v2Payload) {
+                is PlanLockedV2 -> v2Payload.planKey
+                is PlanReconciledV2 -> v2Payload.planKey
+                else -> error("Unreachable plan payload")
+            }
+            val knownEvents = syncStore.checkpointEvents()
+            val canonicalLock = com.pengshi.words.sync.PlanLockArbitration.canonicalLock(knownEvents, planKey)
+            if (canonicalLock != null && event.eventId != canonicalLock.eventId) {
+                val canSupersede = when (v2Payload) {
+                    is PlanLockedV2 -> {
+                        val canonicalPayload = runCatching {
+                            SyncPayloadV2.decode(canonicalLock.payload) as? PlanLockedV2
+                        }.getOrNull()
+                        (canonicalPayload != null && com.pengshi.words.sync.PlanLockArbitration.samePlan(v2Payload, canonicalPayload)) ||
+                            !com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFrom(knownEvents, planKey, event.deviceId)
+                    }
+                    is PlanReconciledV2 ->
+                        !com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFrom(knownEvents, planKey, event.deviceId)
+                    else -> false
+                }
+                if (canSupersede) return true
+            }
             return when (v2Payload) {
-                is PlanLockedV2 -> applyRemotePlan(v2Payload)
+                is PlanLockedV2 -> applyRemotePlan(event, v2Payload, knownEvents)
                 is PlanReconciledV2 -> applyRemotePlanReconciliation(v2Payload)
-                is FeedbackPayloadV2 -> applyRemoteFeedback(v2Payload)
+                else -> false
             }
         }
+        if (v2Payload is FeedbackPayloadV2) return applyRemoteFeedback(v2Payload)
         if (event.kind != SyncEventKind.FEEDBACK_RECORDED && event.kind != SyncEventKind.FEEDBACK_REVISED) return false
         val localDate = event.planKey?.removePrefix("plan:")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return false
         val normalizedWord = event.wordKey?.removePrefix("word:")?.trim()?.lowercase(Locale.ROOT) ?: return false
@@ -1251,7 +1300,11 @@ private class AppContainer(private val context: Context) {
         }.getOrDefault(false)
     }
 
-    private suspend fun applyRemotePlan(payload: PlanLockedV2): Boolean {
+    private suspend fun applyRemotePlan(
+        event: SyncEventRecord,
+        payload: PlanLockedV2,
+        knownEvents: List<SyncEventRecord>,
+    ): Boolean {
         val planKey = SyncKeyFactory.planKey(payload.localDate)
         val existing = repository.getPlan(payload.localDate)
         val entries = payload.items.map { item ->
@@ -1292,6 +1345,37 @@ private class AppContainer(private val context: Context) {
         }.toSet()
         val remoteKeys = payload.items.mapTo(linkedSetOf()) { it.itemKey }
         val existingItems = repository.getItems(existing.id)
+        val localPositions = existingItems.mapNotNull { item ->
+            repository.getWord(item.wordId)?.let { word ->
+                SyncKeyFactory.itemKey(planKey, SyncKeyFactory.wordKey(word.normalizedSpelling), item.source) to item.selectionRank
+            }
+        }.toMap()
+        val remotePositions = payload.items.associate { it.itemKey to it.position }
+        if (existing.quota == payload.quota && localPositions == remotePositions) return true
+
+        val otherDeviceHasFeedback =
+            com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFromAnotherDevice(knownEvents, planKey, event.deviceId)
+        val localPlanIsUnstartedAutomatic = existingItems.all { item ->
+            item.source in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) &&
+                item.status == DailyItemStatus.PENDING &&
+                repository.getEvents(item.id).let { events ->
+                    events.isNotEmpty() && events.all { reviewEvent ->
+                        reviewEvent.status == IntradayEventStatus.PENDING && reviewEvent.feedback == null
+                    }
+                }
+        }
+        if (!otherDeviceHasFeedback && localPlanIsUnstartedAutomatic) {
+            val replacement = existing.copy(
+                quota = payload.quota,
+                plannedUniqueWordCount = entries.count { it.item.source != PlanSource.EXTRA },
+                completedUniqueWordCount = 0,
+                status = DailyPlanStatus.IN_PROGRESS,
+                createdAt = payload.createdAtUtc,
+                updatedAt = payload.createdAtUtc,
+            )
+            localPlanRepository.replaceUnstartedPlanFromSync(replacement, entries)
+            return true
+        }
         val staleUnseenNewItems = existingItems.filter { item ->
             item.source == PlanSource.NEW &&
                 SyncKeyFactory.itemKey(
@@ -1329,7 +1413,7 @@ private class AppContainer(private val context: Context) {
         val targetMainCount = mainCount - staleUnseenNewItems.size + missing.count { it.item.source != PlanSource.EXTRA }
         if (targetMainCount > maxOf(existing.quota, payload.quota)) return false
         if (staleUnseenNewItems.isEmpty() && missing.isEmpty() && existing.quota == payload.quota) return true
-        localPlanRepository.replaceUnseenNewItems(
+        localPlanRepository.replaceUnseenAutomaticItems(
             existing.copy(
                 quota = payload.quota,
                 plannedUniqueWordCount = targetMainCount,
@@ -1353,7 +1437,7 @@ private class AppContainer(private val context: Context) {
         }.toMap()
         val removedItems = payload.removedItemKeys.mapNotNull { itemKeys[it] }
         if (removedItems.any { item ->
-                item.source != PlanSource.NEW || item.status != DailyItemStatus.PENDING ||
+                item.source !in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) || item.status != DailyItemStatus.PENDING ||
                     repository.getEvents(item.id).let { events ->
                         events.isEmpty() || events.any { event -> event.status != IntradayEventStatus.PENDING || event.feedback != null }
                     }
@@ -1384,11 +1468,12 @@ private class AppContainer(private val context: Context) {
             if (missingEntries.isEmpty() && updatedQuota == existing.quota) return true
             val mainCount = existingItems.count { it.source != PlanSource.EXTRA }
             if (missingEntries.isEmpty()) {
-                RoomDailyPlanRepository(database).replaceUnseenNewItems(
+                RoomDailyPlanRepository(database).replaceUnseenAutomaticItems(
                     existing.copy(quota = updatedQuota, plannedUniqueWordCount = mainCount, updatedAt = Instant.now()),
                     emptySet(),
                     emptyList(),
                     Instant.now(),
+                    reason = payload.reason,
                 )
             } else RoomDailyPlanRepository(database).appendToPlan(
                 existing.copy(
@@ -1400,7 +1485,7 @@ private class AppContainer(private val context: Context) {
             )
         } else {
             val mainCount = existingItems.count { it.source != PlanSource.EXTRA }
-            RoomDailyPlanRepository(database).replaceUnseenNewItems(
+            RoomDailyPlanRepository(database).replaceUnseenAutomaticItems(
                 existing.copy(
                     quota = updatedQuota,
                     plannedUniqueWordCount = (mainCount - removedItems.size + missingEntries.count { it.item.source != PlanSource.EXTRA }).coerceAtLeast(0),
@@ -1409,6 +1494,7 @@ private class AppContainer(private val context: Context) {
                 removedItems.map { it.id }.toSet(),
                 missingEntries,
                 Instant.now(),
+                reason = payload.reason,
             )
         }
         return true
@@ -1459,11 +1545,25 @@ private class AppContainer(private val context: Context) {
 
     suspend fun hasLocalContent(): Boolean = database.wordDao().count() > 0
 
-    suspend fun startupWordFieldData(): StartupWordFieldData = database.withTransaction {
-        StartupWordFieldData(
-            wordIds = database.wordDao().getAllActiveIds(),
-            completedFeedbackWordIds = database.reviewLogDao().getReviewedWordIds().toSet(),
-        )
+    suspend fun startupWordFieldData(): StartupWordFieldData {
+        reconcileDuplicatePrimarySenses()
+        return database.withTransaction {
+            StartupWordFieldData(
+                wordIds = database.wordDao().getAllActiveIds(),
+                completedFeedbackWordIds = database.reviewLogDao().getReviewedWordIds().toSet(),
+            )
+        }
+    }
+
+    /** Removes old sense rows that duplicate the primary meaning and carry the same source. */
+    private suspend fun reconcileDuplicatePrimarySenses() = database.withTransaction {
+        val wordsById = database.wordDao().getAll().associateBy { it.id }
+        val duplicates = database.wordSenseDao().getAll().filter { sense ->
+            val word = wordsById[sense.wordId] ?: return@filter false
+            sameMeaningContent(word.definitionCn, sense.definitionCn) &&
+                word.definitionSource.trim().equals(sense.definitionSource.trim(), ignoreCase = true)
+        }.map { it.id }
+        if (duplicates.isNotEmpty()) database.wordSenseDao().deleteByIds(duplicates)
     }
 
     suspend fun seedIfNeeded() {
@@ -1519,6 +1619,7 @@ private class AppContainer(private val context: Context) {
             syncPreferences.edit().putInt(CET6_EXAMPLES_VERSION_KEY, CET6_EXAMPLES_VERSION).apply()
         }
         BUILTIN_ASSET_PACKS.forEach { seedBuiltinAssetPack(it, needsBuiltinMetadataUpgrade) }
+        reconcileDuplicateCet6Decks()
         if (needsBuiltinMetadataUpgrade) {
             syncPreferences.edit().putInt(BUILTIN_METADATA_VERSION_KEY, BUILTIN_METADATA_VERSION).apply()
         }
@@ -1528,6 +1629,7 @@ private class AppContainer(private val context: Context) {
             }
             syncPreferences.edit().putInt(GENERATED_EXAMPLES_VERSION_KEY, GENERATED_EXAMPLES_VERSION).apply()
         }
+        reconcileDuplicatePrimarySenses()
     }
 
     /** Reapplies bundled source metadata after a remote snapshot has replaced local seed data. */
@@ -1538,11 +1640,74 @@ private class AppContainer(private val context: Context) {
         RoomImportRepository(database).reconcileCet6SourceMetadata(cet6Preview)
         RoomImportRepository(database).reconcileBuiltinWordMetadata(cet6Preview)
         BUILTIN_ASSET_PACKS.forEach { seedBuiltinAssetPack(it, needsMetadataUpgrade = true) }
+        reconcileDuplicateCet6Decks()
         context.assets.open("wordpacks/cet6/examples.csv").use { input ->
             RoomExamplePackImporter(database).importCet6Examples(input)
         }
         context.assets.open("wordpacks/generated-examples/examples.csv").use { input ->
             RoomExamplePackImporter(database).importBundledExamples(input)
+        }
+        reconcileDuplicatePrimarySenses()
+    }
+
+    /** Removes the legacy CET6 deck alias while keeping the canonical core deck and all word progress. */
+    private suspend fun reconcileDuplicateCet6Decks() {
+        val expectedWordIds = database.wordDao().getByTag("cet6-core").mapTo(linkedSetOf()) { it.id }
+        if (expectedWordIds.isEmpty()) return
+
+        val aliases = database.withTransaction {
+            val deckDao = database.deckDao()
+            val candidates = deckDao.getAll().filter { deck ->
+                deck.sourceType == com.pengshi.words.database.DeckSourceTypeEntity.BUILTIN &&
+                    (deck.name == "六级核心词汇" || deck.name == "CET6" ||
+                        deck.sourceFileName == "words.csv" || deck.sourceFileName == "imported.csv")
+            }
+            val linksByDeck = candidates.associate { deck ->
+                deck to deckDao.getDeckWordsForDecks(listOf(deck.id))
+            }
+            val matching = linksByDeck.filterValues { links ->
+                links.mapTo(linkedSetOf()) { it.wordId } == expectedWordIds
+            }.keys.toList()
+            if (matching.isEmpty()) return@withTransaction emptyMap()
+
+            val canonical = matching.firstOrNull { it.name == "六级核心词汇" }
+                ?: matching.firstOrNull { it.sourceFileName == "words.csv" }
+                ?: matching.first()
+            val canonicalWordIds = linksByDeck.getValue(canonical).mapTo(linkedSetOf()) { it.wordId }
+            val remappedIds = linkedMapOf<Long, Long>()
+            matching.filter { it.id != canonical.id }.forEach { duplicate ->
+                linksByDeck.getValue(duplicate).forEach { link ->
+                    if (canonicalWordIds.add(link.wordId)) {
+                        deckDao.insertDeckWord(link.copy(deckId = canonical.id))
+                    }
+                }
+                deckDao.deleteById(duplicate.id)
+                remappedIds[duplicate.id] = canonical.id
+            }
+            deckDao.getById(canonical.id)?.let { current ->
+                val updated = current.copy(
+                    name = "六级核心词汇",
+                    sourceFileName = "words.csv",
+                    wordCount = expectedWordIds.size,
+                    updatedAt = Instant.now(),
+                )
+                if (updated != current) deckDao.update(updated)
+            }
+            remappedIds
+        }
+
+        if (aliases.isNotEmpty()) {
+            val current = wordPoolSelection()
+            val allDeckIds = database.deckDao().getAll().mapTo(linkedSetOf()) { it.id }
+            val includedDeckIds = current.includedDeckIds.mapTo(linkedSetOf()) { aliases[it] ?: it }
+            val deckWeights = current.deckWeights.entries
+                .groupBy { aliases[it.key] ?: it.key }
+                .filterKeys { it in allDeckIds }
+                .mapValues { (_, entries) -> entries.sumOf { it.value }.coerceAtMost(100) }
+            preferences.edit()
+                .putStringSet(WORD_POOL_DECK_IDS, includedDeckIds.map(Long::toString).toSet())
+                .putStringSet(WORD_POOL_WEIGHTS, deckWeights.entries.map { "${it.key}:${it.value}" }.toSet())
+                .apply()
         }
     }
 
@@ -1751,7 +1916,7 @@ private class AppContainer(private val context: Context) {
         }
         val state = HomeUiState(
             completedUniqueWordCount = plan?.completedUniqueWordCount ?: 0,
-            quota = plan?.quota ?: 30,
+            quota = preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT).let(DailyQuota::normalize),
             dueCount = counts.dueCount,
             newCount = counts.newCount,
             reviewPlanned = reviewItems.size,
@@ -1763,6 +1928,7 @@ private class AppContainer(private val context: Context) {
             phase = phase,
             isTodayComplete = phase == HomeStudyPhase.COMPLETE,
             checkInDates = database.dailyPlanDao().getCompletedPlanDates().toSet(),
+            plannedUniqueWordCount = plan?.plannedUniqueWordCount ?: 0,
         )
         saveCachedHomeState(state, today)
         return state
@@ -1784,6 +1950,7 @@ private class AppContainer(private val context: Context) {
         HomeUiState(
             completedUniqueWordCount = root.optInt("completedUniqueWordCount"),
             quota = root.optInt("quota", 30),
+            plannedUniqueWordCount = root.optInt("plannedUniqueWordCount"),
             dueCount = root.optInt("dueCount"),
             newCount = root.optInt("newCount"),
             reviewPlanned = root.optInt("reviewPlanned"),
@@ -1811,6 +1978,7 @@ private class AppContainer(private val context: Context) {
             .put("date", date.toString())
             .put("completedUniqueWordCount", state.completedUniqueWordCount)
             .put("quota", state.quota)
+            .put("plannedUniqueWordCount", state.plannedUniqueWordCount)
             .put("dueCount", state.dueCount)
             .put("newCount", state.newCount)
             .put("reviewPlanned", state.reviewPlanned)
@@ -2077,12 +2245,15 @@ private class AppContainer(private val context: Context) {
     suspend fun updateDailyQuota(quota: Int, localDate: LocalDate = LocalDate.now()) = runStudyOperation {
         DailyQuota.requireValid(quota)
         val previous = preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT).let(DailyQuota::normalize)
-        if (previous == quota) return@runStudyOperation
-        check(preferences.edit().putInt(DAILY_QUOTA_KEY, quota).commit()) { "每日额度保存失败" }
+        val quotaChanged = previous != quota
+        if (quotaChanged) {
+            check(preferences.edit().putInt(DAILY_QUOTA_KEY, quota).commit()) { "每日额度保存失败" }
+        }
         try {
-            adjustDailyQuota.adjust(localDate, quota, Instant.now(), savedDefaultMode())
+            val planChanged = adjustDailyQuota.adjust(localDate, quota, Instant.now(), savedDefaultMode())
+            if (quotaChanged || planChanged) saveLocalDailyQuotaPending(true)
         } catch (failure: Throwable) {
-            preferences.edit().putInt(DAILY_QUOTA_KEY, previous).commit()
+            if (quotaChanged) preferences.edit().putInt(DAILY_QUOTA_KEY, previous).commit()
             throw failure
         }
         runCatching { writeAutomaticBackup() }
@@ -2484,21 +2655,39 @@ private class AppContainer(private val context: Context) {
             syncStore.recoverReplayedLocalFeedback()
             val checkpointAction = restoreRemoteBootstrapIfNeeded(remote, settings.syncPassword)
             RoomUserDeckRepository(database).labelUnattributedLiteratureContent()
-            val syncResult = SyncCoordinator(
+            val initialSyncResult = SyncCoordinator(
                 localStore = syncStore,
                 remote = remote,
                 syncPassword = settings.syncPassword,
             ).run()
             if (checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_BEHIND ||
                 checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_CONFLICT
-            ) return@runCatching syncResult.copy(
+            ) return@runCatching initialSyncResult.copy(
                 status = SyncStatus.CONFLICT,
                 checkpointAction = checkpointAction,
                 detail = "检查点事件账本未能证明一致，已保留本地学习数据并跳过快照替换",
             )
+            val quotaPlanChanged = if (initialSyncResult.status in setOf(SyncStatus.FAILED, SyncStatus.AUTH_REQUIRED, SyncStatus.CONFLICT)) {
+                false
+            } else {
+                adjustDailyQuota.adjust(
+                    LocalDate.now(),
+                    preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT).let(DailyQuota::normalize),
+                    Instant.now(),
+                    savedDefaultMode(),
+                )
+            }
+            val syncResult = if (quotaPlanChanged) {
+                SyncCoordinator(
+                    localStore = syncStore,
+                    remote = remote,
+                    syncPassword = settings.syncPassword,
+                ).run()
+            } else initialSyncResult
             val uploadedCheckpoint = if (syncResult.status == SyncStatus.UP_TO_DATE) {
                 uploadCurrentBootstrap(remote, settings.syncPassword)
             } else false
+            if (syncResult.status == SyncStatus.UP_TO_DATE) saveLocalDailyQuotaPending(false)
             syncResult.copy(
                 checkpointAction = if (uploadedCheckpoint && checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.NOT_CHECKED)
                     com.pengshi.words.sync.SyncCheckpointAction.CREATED else checkpointAction,
@@ -2515,6 +2704,26 @@ private class AppContainer(private val context: Context) {
             .putString(SYNC_LAST_RESULT_KEY, result.userMessage())
             .apply()
         return result
+    }
+
+    private fun localDailyQuotaPending(): Boolean =
+        syncPreferences.getBoolean(SYNC_LOCAL_DAILY_QUOTA_PENDING_KEY, false)
+
+    private fun saveLocalDailyQuotaPending(pending: Boolean) {
+        syncPreferences.edit().putBoolean(SYNC_LOCAL_DAILY_QUOTA_PENDING_KEY, pending).apply()
+    }
+
+    private fun applyRemoteDailyQuotaIfUncontested(
+        settings: BackupSettingsSnapshot?,
+        remoteDeviceId: String?,
+    ) {
+        settings ?: return
+        if (localDailyQuotaPending() || remoteDeviceId == syncDeviceId) return
+        val remoteQuota = DailyQuota.normalize(settings.dailyQuota)
+        val localQuota = preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT).let(DailyQuota::normalize)
+        if (remoteQuota != localQuota) {
+            check(preferences.edit().putInt(DAILY_QUOTA_KEY, remoteQuota).commit()) { "同步每日额度失败" }
+        }
     }
 
     private suspend fun restoreRemoteBootstrapIfNeeded(remote: GitHubRemoteStore, password: String): com.pengshi.words.sync.SyncCheckpointAction {
@@ -2545,16 +2754,26 @@ private class AppContainer(private val context: Context) {
                     restoreRemoteLearningSnapshot(localSnapshot, remoteSnapshot)
                     syncStore.restoreCheckpointEvents(decodedCheckpoint.appliedEvents, decodedCheckpoint.metadata.revision)
                     restoreSyncedStatsStart(remotePreview.statsStartDate, remoteSnapshot)
-                    remotePreview.settings?.let { restoreBackupSettings(it, includeDeviceVoice = false) }
+                    remotePreview.settings?.let { remoteSettings ->
+                        val settingsToApply = if (localDailyQuotaPending()) {
+                            remoteSettings.copy(
+                                dailyQuota = preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT)
+                                    .let(DailyQuota::normalize),
+                            )
+                        } else remoteSettings
+                        restoreBackupSettings(settingsToApply, includeDeviceVoice = false)
+                    }
                     reconcileBundledSourcesAfterRemoteSnapshot()
                     return com.pengshi.words.sync.SyncCheckpointAction.RESTORED_EMPTY_DEVICE
                 }
                 CheckpointDecision.MERGE_CONTENT_ONLY -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
                     snapshotGateway.mergeContent(remoteSnapshot)
                     reconcileBundledSourcesAfterRemoteSnapshot()
                     return com.pengshi.words.sync.SyncCheckpointAction.MERGED_CONTENT_ONLY
                 }
                 CheckpointDecision.MERGE_INCREMENTAL -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
                     if (PersonalSnapshotSync.shouldMergeRemoteContent(localSummary, remoteSummary)) {
                         snapshotGateway.mergeContent(remoteSnapshot)
                         reconcileBundledSourcesAfterRemoteSnapshot()
@@ -2563,7 +2782,10 @@ private class AppContainer(private val context: Context) {
                 }
                 CheckpointDecision.CREATE_NEW,
                 CheckpointDecision.KEEP_REMOTE,
-                -> return com.pengshi.words.sync.SyncCheckpointAction.KEPT_LOCAL
+                -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
+                    return com.pengshi.words.sync.SyncCheckpointAction.KEPT_LOCAL
+                }
                 CheckpointDecision.BLOCKED_BEHIND -> return com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_BEHIND
                 CheckpointDecision.BLOCKED_CONFLICT -> return com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_CONFLICT
             }
@@ -2572,9 +2794,18 @@ private class AppContainer(private val context: Context) {
                 restoreRemoteLearningSnapshot(localSnapshot, remoteSnapshot)
                 reconcileBundledSourcesAfterRemoteSnapshot()
                 restoreSyncedStatsStart(remotePreview.statsStartDate, remoteSnapshot)
-                remotePreview.settings?.let { restoreBackupSettings(it, includeDeviceVoice = false) }
+                remotePreview.settings?.let { remoteSettings ->
+                    val settingsToApply = if (localDailyQuotaPending()) {
+                        remoteSettings.copy(
+                            dailyQuota = preferences.getInt(DAILY_QUOTA_KEY, DailyQuota.DEFAULT)
+                                .let(DailyQuota::normalize),
+                        )
+                    } else remoteSettings
+                    restoreBackupSettings(settingsToApply, includeDeviceVoice = false)
+                }
                 return com.pengshi.words.sync.SyncCheckpointAction.RESTORED_EMPTY_DEVICE
             }
+            applyRemoteDailyQuotaIfUncontested(remotePreview.settings, remoteDeviceId = null)
             if (PersonalSnapshotSync.shouldMergeRemoteContent(localSummary, remoteSummary)) {
                 snapshotGateway.mergeContent(remoteSnapshot)
                 reconcileBundledSourcesAfterRemoteSnapshot()
@@ -2740,6 +2971,7 @@ private class AppContainer(private val context: Context) {
         const val SYNC_LAST_SNAPSHOT_KEY = "github_last_snapshot"
         const val SYNC_LAST_SYNC_KEY = "github_last_sync"
         const val SYNC_LAST_RESULT_KEY = "github_last_result"
+        const val SYNC_LOCAL_DAILY_QUOTA_PENDING_KEY = "github_local_daily_quota_pending"
         const val CET6_EXAMPLES_VERSION_KEY = "cet6_examples_version"
         const val CET6_EXAMPLES_VERSION = 3
         const val GENERATED_EXAMPLES_VERSION_KEY = "generated_examples_version"

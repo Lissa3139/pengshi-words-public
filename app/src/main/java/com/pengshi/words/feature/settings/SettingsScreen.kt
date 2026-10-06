@@ -216,7 +216,7 @@ fun SettingsScreen(
                 enabled = parsedQuota != null && !state.isUpdatingDailyQuota,
             ) { Text(if (state.isUpdatingDailyQuota) "保存中…" else "保存额度") }
         }
-        Text("范围 1–${DailyQuota.MAX}。保存后立即调整今天尚未开始的自动新词；已开始或完成的学习、手动选词和额外词会保留。",
+        Text("范围 1–${DailyQuota.MAX}。降低额度时先移除尚未开始的新词，再按优先级移除未开始的复习词；已开始或完成、手动选词和额外词会保留。",
             style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { onAction(SettingsAction.SwitchMode) }, modifier = Modifier.fillMaxWidth()) {
             Text("默认模式：${if (state.defaultMode == StudyMode.EN_TO_CN) "英译中" else "中译英"}")

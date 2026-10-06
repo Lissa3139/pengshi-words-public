@@ -460,6 +460,7 @@ fun DesktopApp(
             try {
                 block()
             } catch (failure: Exception) {
+                container.recordRuntimeDiagnostic("desktop action failed", failure)
                 message = failure.message ?: "操作未完成，请重试。"
             } finally {
                 busy = false
@@ -776,9 +777,10 @@ fun DesktopApp(
                                 dailyQuota = container.dailyQuota,
                                 onSaveDailyQuota = { quota ->
                                     runAction {
+                                        val previousPlanCount = home.plannedUniqueWordCount
                                         withContext(Dispatchers.IO) { container.updateDailyQuota(quota) }
-                                        message = "每日额度已保存；今天尚未开始的自动新词已按新额度调整。"
                                         refresh()
+                                        message = "每日额度已保存；今日计划由 $previousPlanCount 调整为 ${home.plannedUniqueWordCount} 个词。"
                                         syncAfterMutation()
                                     }
                                 },
@@ -939,6 +941,7 @@ fun DesktopApp(
                                             stopSpeech()
                                             val browsing = history?.isHistorical == true
                                             try {
+                                                container.recordRuntimeDiagnostic("study feedback started")
                                                 val result = withContext(Dispatchers.IO) {
                                                     if (browsing || revisingCurrent) {
                                                         container.reviseFeedback(
@@ -952,17 +955,23 @@ fun DesktopApp(
                                                         )
                                                     }
                                                 }
+                                                container.recordRuntimeDiagnostic("study feedback saved")
                                                 if (browsing) {
                                                     history = null
                                                     present(result.session, resetHistory = true)
                                                 } else present(result.session, resetHistory = false, undoToken = result.undoToken)
+                                                container.recordRuntimeDiagnostic("study feedback presented")
                                                 refresh()
+                                                container.recordRuntimeDiagnostic("study feedback refreshed")
                                                 if (result.session.currentWord == null) {
                                                     if (view.session.currentItem?.source == PlanSource.DUE_REVIEW &&
                                                         home.phase == DesktopStudyPhase.CHOOSE_NEW
                                                     ) showNewWordChoice = true
                                                     else showStudyCompletion = true
                                                 }
+                                            } catch (failure: Throwable) {
+                                                container.recordRuntimeDiagnostic("study feedback failed", failure)
+                                                throw failure
                                             } finally {
                                                 studyTransitionMessage = null
                                             }

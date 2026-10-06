@@ -11,6 +11,7 @@ import com.pengshi.words.model.StudyMode
 import com.pengshi.words.model.UserDeckInput
 import com.pengshi.words.model.UserDeckBulkResult
 import com.pengshi.words.model.normalizeDictionaryText
+import com.pengshi.words.model.sameMeaningContent
 import com.pengshi.words.model.wordSenseKey
 import java.time.Instant
 import java.util.Locale
@@ -267,7 +268,9 @@ class RoomUserDeckRepository(
         if (definition.isBlank()) return false
         val key = wordSenseKey(partOfSpeech, definition)
         val cleanSource = source.trim().ifBlank { com.pengshi.words.model.SOURCE_UNVERIFIED }
-        if (key == wordSenseKey(word.partOfSpeech, word.definitionCn)) {
+        if (key == wordSenseKey(word.partOfSpeech, word.definitionCn) ||
+            sameMeaningContent(word.definitionCn, definition)
+        ) {
             if (com.pengshi.words.model.sourceLabelNeedsUpgrade(word.definitionSource, cleanSource)) {
                 database.wordDao().getById(word.id)?.let { current ->
                     database.wordDao().update(current.copy(definitionSource = cleanSource, updatedAt = timestamp))

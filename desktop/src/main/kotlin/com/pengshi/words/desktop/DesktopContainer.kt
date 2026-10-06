@@ -135,7 +135,7 @@ class DesktopContainer private constructor(
             automaticWordPoolProvider = { automaticWordPool() },
         ),
     )
-    private val adjustDailyQuotaUseCase = AdjustDailyQuotaUseCase(repository, startUseCase)
+    private val adjustDailyQuotaUseCase = AdjustDailyQuotaUseCase(repository, startUseCase, scheduler)
     private val submitUseCase = SubmitFeedbackUseCase(repository, scheduler, startUseCase)
     private val addNewWordsUseCase = AddNewWordsUseCase(
         repository = repository,
@@ -164,12 +164,16 @@ class DesktopContainer private constructor(
         snapshotGateway = snapshotGateway,
         contentRepository = contentRepository,
         resourcePath = seedResource,
-        onDeckAliases = wordPoolStore::replaceDeckIds,
+        onDeckAliases = { aliases ->
+            wordPoolStore.replaceDeckIds(aliases)
+            savedLearningSettings = personalSettingsStore.replaceDeckIds(aliases)
+        },
     )
     private val favoriteIds = readFavoriteIds().toMutableSet()
     private val desktopSpeechSettings = WindowsSpeechSettings(speechSettingsPath)
     private val syncSettingsStore = DesktopSyncSettingsStore(syncSettingsPath, legacySyncSettingsPaths)
     private val personalSettingsStore = DesktopPersonalSettingsStore(personalSettingsPath)
+    private val quotaSyncStatePath = personalSettingsPath.resolveSibling("${personalSettingsPath.fileName}.quota-sync.properties")
     @Volatile private var savedLearningSettings = personalSettingsStore.load()
     private val activeSpeechModelDirectory = appSettingsStore?.speechModelDirectory()
         ?: DesktopSpeechModelPaths.defaultExternal()
@@ -188,13 +192,36 @@ class DesktopContainer private constructor(
 
     private suspend fun applyRemoteEvent(event: SyncEventRecord): Boolean {
         val v2Payload = runCatching { SyncPayloadV2.decode(event.payload) }.getOrNull()
-        if (v2Payload != null) {
+        if (v2Payload is PlanLockedV2 || v2Payload is PlanReconciledV2) {
+            val planKey = when (v2Payload) {
+                is PlanLockedV2 -> v2Payload.planKey
+                is PlanReconciledV2 -> v2Payload.planKey
+                else -> error("Unreachable plan payload")
+            }
+            val knownEvents = syncStore.checkpointEvents()
+            val canonicalLock = com.pengshi.words.sync.PlanLockArbitration.canonicalLock(knownEvents, planKey)
+            if (canonicalLock != null && event.eventId != canonicalLock.eventId) {
+                val canSupersede = when (v2Payload) {
+                    is PlanLockedV2 -> {
+                        val canonicalPayload = runCatching {
+                            SyncPayloadV2.decode(canonicalLock.payload) as? PlanLockedV2
+                        }.getOrNull()
+                        (canonicalPayload != null && com.pengshi.words.sync.PlanLockArbitration.samePlan(v2Payload, canonicalPayload)) ||
+                            !com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFrom(knownEvents, planKey, event.deviceId)
+                    }
+                    is PlanReconciledV2 ->
+                        !com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFrom(knownEvents, planKey, event.deviceId)
+                    else -> false
+                }
+                if (canSupersede) return true
+            }
             return when (v2Payload) {
-                is PlanLockedV2 -> applyRemotePlan(v2Payload)
+                is PlanLockedV2 -> applyRemotePlan(event, v2Payload, knownEvents)
                 is PlanReconciledV2 -> applyRemotePlanReconciliation(v2Payload)
-                is FeedbackPayloadV2 -> applyRemoteFeedback(v2Payload)
+                else -> false
             }
         }
+        if (v2Payload is FeedbackPayloadV2) return applyRemoteFeedback(v2Payload)
         if (event.kind != SyncEventKind.FEEDBACK_RECORDED && event.kind != SyncEventKind.FEEDBACK_REVISED) return false
         val localDate = event.planKey?.removePrefix("plan:")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return false
         val normalizedWord = event.wordKey?.removePrefix("word:")?.trim()?.lowercase(Locale.ROOT) ?: return false
@@ -215,7 +242,11 @@ class DesktopContainer private constructor(
         }.getOrDefault(false)
     }
 
-    private suspend fun applyRemotePlan(payload: PlanLockedV2): Boolean {
+    private suspend fun applyRemotePlan(
+        event: SyncEventRecord,
+        payload: PlanLockedV2,
+        knownEvents: List<SyncEventRecord>,
+    ): Boolean {
         val planKey = SyncKeyFactory.planKey(payload.localDate)
         val existing = repository.getPlan(payload.localDate)
         val entries = payload.items.map { item ->
@@ -256,6 +287,37 @@ class DesktopContainer private constructor(
         }.toSet()
         val remoteKeys = payload.items.mapTo(linkedSetOf()) { it.itemKey }
         val existingItems = repository.getItems(existing.id)
+        val localPositions = existingItems.mapNotNull { item ->
+            repository.getWord(item.wordId)?.let { word ->
+                SyncKeyFactory.itemKey(planKey, SyncKeyFactory.wordKey(word.normalizedSpelling), item.source) to item.selectionRank
+            }
+        }.toMap()
+        val remotePositions = payload.items.associate { it.itemKey to it.position }
+        if (existing.quota == payload.quota && localPositions == remotePositions) return true
+
+        val otherDeviceHasFeedback =
+            com.pengshi.words.sync.PlanLockArbitration.hasFeedbackFromAnotherDevice(knownEvents, planKey, event.deviceId)
+        val localPlanIsUnstartedAutomatic = existingItems.all { item ->
+            item.source in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) &&
+                item.status == DailyItemStatus.PENDING &&
+                repository.getEvents(item.id).let { events ->
+                    events.isNotEmpty() && events.all { reviewEvent ->
+                        reviewEvent.status == IntradayEventStatus.PENDING && reviewEvent.feedback == null
+                    }
+                }
+        }
+        if (!otherDeviceHasFeedback && localPlanIsUnstartedAutomatic) {
+            val replacement = existing.copy(
+                quota = payload.quota,
+                plannedUniqueWordCount = entries.count { it.item.source != PlanSource.EXTRA },
+                completedUniqueWordCount = 0,
+                status = DailyPlanStatus.IN_PROGRESS,
+                createdAt = payload.createdAtUtc,
+                updatedAt = payload.createdAtUtc,
+            )
+            remoteRepository.replaceUnstartedPlanFromSync(replacement, entries)
+            return true
+        }
         val staleUnseenNewItems = existingItems.filter { item ->
             item.source == PlanSource.NEW &&
                 SyncKeyFactory.itemKey(
@@ -293,7 +355,7 @@ class DesktopContainer private constructor(
         val targetMainCount = mainCount - staleUnseenNewItems.size + missing.count { it.item.source != PlanSource.EXTRA }
         if (targetMainCount > maxOf(existing.quota, payload.quota)) return false
         if (staleUnseenNewItems.isEmpty() && missing.isEmpty() && existing.quota == payload.quota) return true
-        remoteRepository.replaceUnseenNewItems(
+        remoteRepository.replaceUnseenAutomaticItems(
             existing.copy(
                 quota = payload.quota,
                 plannedUniqueWordCount = targetMainCount,
@@ -317,7 +379,7 @@ class DesktopContainer private constructor(
         }.toMap()
         val removedItems = payload.removedItemKeys.mapNotNull { itemKeys[it] }
         if (removedItems.any { item ->
-                item.source != PlanSource.NEW || item.status != DailyItemStatus.PENDING ||
+                item.source !in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) || item.status != DailyItemStatus.PENDING ||
                     repository.getEvents(item.id).let { events ->
                         events.isEmpty() || events.any { event -> event.status != IntradayEventStatus.PENDING || event.feedback != null }
                     }
@@ -347,24 +409,20 @@ class DesktopContainer private constructor(
         if (removedItems.isEmpty()) {
             if (missingEntries.isEmpty() && updatedQuota == existing.quota) return true
             val mainCount = existingItems.count { it.source != PlanSource.EXTRA }
-            if (missingEntries.isEmpty()) {
-                DesktopStudySessionRepository(database).replaceUnseenNewItems(
-                    existing.copy(quota = updatedQuota, plannedUniqueWordCount = mainCount, updatedAt = Instant.now()),
-                    emptySet(),
-                    emptyList(),
-                    Instant.now(),
-                )
-            } else DesktopStudySessionRepository(database).appendToPlan(
+            DesktopStudySessionRepository(database).replaceUnseenAutomaticItems(
                 existing.copy(
                     quota = updatedQuota,
                     plannedUniqueWordCount = mainCount + missingEntries.count { it.item.source != PlanSource.EXTRA },
                     updatedAt = Instant.now(),
                 ),
+                emptySet(),
                 missingEntries,
+                Instant.now(),
+                reason = payload.reason,
             )
         } else {
             val mainCount = existingItems.count { it.source != PlanSource.EXTRA }
-            DesktopStudySessionRepository(database).replaceUnseenNewItems(
+            DesktopStudySessionRepository(database).replaceUnseenAutomaticItems(
                 existing.copy(
                     quota = updatedQuota,
                     plannedUniqueWordCount = (mainCount - removedItems.size + missingEntries.count { it.item.source != PlanSource.EXTRA }).coerceAtLeast(0),
@@ -373,6 +431,7 @@ class DesktopContainer private constructor(
                 removedItems.map { it.id }.toSet(),
                 missingEntries,
                 Instant.now(),
+                reason = payload.reason,
             )
         }
         return true
@@ -467,7 +526,7 @@ class DesktopContainer private constructor(
         val snapshot = snapshotGateway.snapshot()
         return DesktopHomeState(
             completedUniqueWordCount = plan?.completedUniqueWordCount ?: 0,
-            quota = plan?.quota ?: 30,
+            quota = dailyQuota,
             dueCount = candidates.count { !it.isNew },
             availableNewCount = candidates.count { it.isNew },
             reviewTotal = reviewItems.size,
@@ -481,6 +540,7 @@ class DesktopContainer private constructor(
             checkInDates = snapshot.dailyPlans
                 .filter { it.status == DailyPlanStatus.COMPLETED }
                 .mapTo(linkedSetOf()) { it.localDate },
+            plannedUniqueWordCount = plan?.plannedUniqueWordCount ?: 0,
         )
     }
 
@@ -762,21 +822,28 @@ class DesktopContainer private constructor(
     suspend fun updateDailyQuota(quota: Int, localDate: LocalDate = LocalDate.now()) = operationMutex.withLock {
         DailyQuota.requireValid(quota)
         val previous = savedLearningSettings
-        if (DailyQuota.normalize(previous.dailyQuota) == quota) return@withLock
-        val updated = previous.copy(dailyQuota = quota)
-        personalSettingsStore.save(updated)
-        savedLearningSettings = updated
+        val quotaChanged = DailyQuota.normalize(previous.dailyQuota) != quota
+        if (quotaChanged) {
+            val updated = previous.copy(dailyQuota = quota)
+            personalSettingsStore.save(updated)
+            savedLearningSettings = updated
+        }
         try {
-            adjustDailyQuotaUseCase.adjust(localDate, quota, Instant.now(), preferredMode)
+            val planChanged = adjustDailyQuotaUseCase.adjust(localDate, quota, Instant.now(), preferredMode)
+            if (quotaChanged || planChanged) saveLocalDailyQuotaPending(true)
         } catch (failure: Throwable) {
-            savedLearningSettings = previous
-            personalSettingsStore.save(previous)
+            if (quotaChanged) {
+                savedLearningSettings = previous
+                personalSettingsStore.save(previous)
+            }
             throw failure
         }
     }
 
     suspend fun applySavedDailyQuotaToToday(localDate: LocalDate = LocalDate.now()) = operationMutex.withLock {
-        adjustDailyQuotaUseCase.adjust(localDate, dailyQuota, Instant.now(), preferredMode)
+        if (adjustDailyQuotaUseCase.adjust(localDate, dailyQuota, Instant.now(), preferredMode)) {
+            saveLocalDailyQuotaPending(true)
+        }
     }
 
     fun saveSpeechSettings(rate: Float) {
@@ -850,21 +917,34 @@ class DesktopContainer private constructor(
         return runCatching {
             val checkpointAction = restoreRemoteBootstrapIfNeeded(remote, settings.syncPassword)
             userDeckRepository.labelUnattributedLiteratureContent()
-            val syncResult = SyncCoordinator(
+            val initialSyncResult = SyncCoordinator(
                 localStore = syncStore,
                 remote = remote,
                 syncPassword = settings.syncPassword,
             ).run()
             if (checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_BEHIND ||
                 checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_CONFLICT
-            ) return@runCatching syncResult.copy(
+            ) return@runCatching initialSyncResult.copy(
                 status = SyncStatus.CONFLICT,
                 checkpointAction = checkpointAction,
                 detail = "检查点事件账本未能证明一致，已保留本地学习数据并跳过快照替换",
             )
+            val quotaPlanChanged = if (initialSyncResult.status in setOf(SyncStatus.FAILED, SyncStatus.AUTH_REQUIRED, SyncStatus.CONFLICT)) {
+                false
+            } else {
+                adjustDailyQuotaUseCase.adjust(LocalDate.now(), dailyQuota, Instant.now(), preferredMode)
+            }
+            val syncResult = if (quotaPlanChanged) {
+                SyncCoordinator(
+                    localStore = syncStore,
+                    remote = remote,
+                    syncPassword = settings.syncPassword,
+                ).run()
+            } else initialSyncResult
             val uploadedCheckpoint = if (syncResult.status == SyncStatus.UP_TO_DATE) {
                 uploadCurrentBootstrapIfChanged(remote, settings.syncPassword)
             } else false
+            if (syncResult.status == SyncStatus.UP_TO_DATE) saveLocalDailyQuotaPending(false)
             syncResult.copy(
                 checkpointAction = if (uploadedCheckpoint && checkpointAction == com.pengshi.words.sync.SyncCheckpointAction.NOT_CHECKED)
                     com.pengshi.words.sync.SyncCheckpointAction.CREATED else checkpointAction,
@@ -894,6 +974,55 @@ class DesktopContainer private constructor(
         }
     }
 
+    fun recordRuntimeDiagnostic(message: String, failure: Throwable? = null) {
+        runCatching {
+            val detail = buildString {
+                append(Instant.now()).append(' ').append(message)
+                if (failure != null) appendLine().append(failure.stackTraceToString())
+                append(System.lineSeparator())
+            }
+            Files.writeString(
+                dataDirectory.resolve("pengshi-desktop-diagnostics.log"),
+                detail,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND,
+            )
+        }
+    }
+
+    private fun localDailyQuotaPending(): Boolean = runCatching {
+        if (!Files.isRegularFile(quotaSyncStatePath)) return@runCatching false
+        Properties().also { properties ->
+            Files.newInputStream(quotaSyncStatePath).use(properties::load)
+        }.getProperty("pendingLocalDailyQuota", "false").toBoolean()
+    }.getOrDefault(false)
+
+    private fun saveLocalDailyQuotaPending(pending: Boolean) {
+        val properties = Properties().apply { setProperty("pendingLocalDailyQuota", pending.toString()) }
+        Files.createDirectories(quotaSyncStatePath.toAbsolutePath().parent)
+        Files.newOutputStream(
+            quotaSyncStatePath,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.WRITE,
+        ).use { properties.store(it, "Local quota changes awaiting checkpoint sync") }
+    }
+
+    private suspend fun applyRemoteDailyQuotaIfUncontested(
+        settings: BackupSettingsSnapshot?,
+        remoteDeviceId: String?,
+    ) {
+        settings ?: return
+        if (localDailyQuotaPending() || remoteDeviceId == syncStore.deviceId) return
+        val remoteQuota = DailyQuota.normalize(settings.dailyQuota)
+        if (remoteQuota != dailyQuota) {
+            val updated = savedLearningSettings.copy(dailyQuota = remoteQuota)
+            personalSettingsStore.save(updated)
+            savedLearningSettings = updated
+        }
+    }
+
     private suspend fun restoreRemoteBootstrapIfNeeded(remote: GitHubRemoteStore, password: String): com.pengshi.words.sync.SyncCheckpointAction {
         val bootstrap = remote.readBootstrap() ?: return com.pengshi.words.sync.SyncCheckpointAction.NOT_CHECKED
         val decodedCheckpoint = runCatching {
@@ -920,17 +1049,26 @@ class DesktopContainer private constructor(
                 CheckpointDecision.RESTORE_EMPTY_DEVICE -> {
                     restoreRemoteLearningSnapshot(localSnapshot, remotePreview.snapshot)
                     syncStore.restoreCheckpointEvents(decodedCheckpoint.appliedEvents, decodedCheckpoint.metadata.revision)
-                    remotePreview.settings?.let { applyRemoteSettings(it, includeDeviceVoice = false) }
+                    val keepLocalQuota = localDailyQuotaPending()
+                    remotePreview.settings?.let { remoteSettings ->
+                        val settingsToApply = if (keepLocalQuota) {
+                            remoteSettings.copy(dailyQuota = dailyQuota)
+                        } else remoteSettings
+                        applyRemoteSettings(settingsToApply, includeDeviceVoice = false)
+                    }
+                    saveLocalDailyQuotaPending(keepLocalQuota)
                     restoreSyncedStatsStart(remotePreview.statsStartDate, remotePreview.snapshot)
                     seedLoader.reconcileBundledSourcesAfterRemoteSnapshot()
                     return com.pengshi.words.sync.SyncCheckpointAction.RESTORED_EMPTY_DEVICE
                 }
                 CheckpointDecision.MERGE_CONTENT_ONLY -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
                     snapshotGateway.mergeContent(remotePreview.snapshot)
                     seedLoader.reconcileBundledSourcesAfterRemoteSnapshot()
                     return com.pengshi.words.sync.SyncCheckpointAction.MERGED_CONTENT_ONLY
                 }
                 CheckpointDecision.MERGE_INCREMENTAL -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
                     if (PersonalSnapshotSync.shouldMergeRemoteContent(localSummary, remoteSummary)) {
                         snapshotGateway.mergeContent(remotePreview.snapshot)
                         seedLoader.reconcileBundledSourcesAfterRemoteSnapshot()
@@ -939,18 +1077,29 @@ class DesktopContainer private constructor(
                 }
                 CheckpointDecision.CREATE_NEW,
                 CheckpointDecision.KEEP_REMOTE,
-                -> return com.pengshi.words.sync.SyncCheckpointAction.KEPT_LOCAL
+                -> {
+                    applyRemoteDailyQuotaIfUncontested(remotePreview.settings, decodedCheckpoint.metadata.deviceId)
+                    return com.pengshi.words.sync.SyncCheckpointAction.KEPT_LOCAL
+                }
                 CheckpointDecision.BLOCKED_BEHIND -> return com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_BEHIND
                 CheckpointDecision.BLOCKED_CONFLICT -> return com.pengshi.words.sync.SyncCheckpointAction.BLOCKED_CONFLICT
             }
         } else {
             if (PersonalSnapshotSync.shouldRestoreRemote(localSummary, remoteSummary)) {
                 restoreRemoteLearningSnapshot(localSnapshot, remotePreview.snapshot)
-                remotePreview.settings?.let { applyRemoteSettings(it, includeDeviceVoice = false) }
+                val keepLocalQuota = localDailyQuotaPending()
+                remotePreview.settings?.let { remoteSettings ->
+                    val settingsToApply = if (keepLocalQuota) {
+                        remoteSettings.copy(dailyQuota = dailyQuota)
+                    } else remoteSettings
+                    applyRemoteSettings(settingsToApply, includeDeviceVoice = false)
+                }
+                saveLocalDailyQuotaPending(keepLocalQuota)
                 restoreSyncedStatsStart(remotePreview.statsStartDate, remotePreview.snapshot)
                 seedLoader.reconcileBundledSourcesAfterRemoteSnapshot()
                 return com.pengshi.words.sync.SyncCheckpointAction.RESTORED_EMPTY_DEVICE
             }
+            applyRemoteDailyQuotaIfUncontested(remotePreview.settings, remoteDeviceId = null)
             if (PersonalSnapshotSync.shouldMergeRemoteContent(localSummary, remoteSummary)) {
                 snapshotGateway.mergeContent(remotePreview.snapshot)
                 seedLoader.reconcileBundledSourcesAfterRemoteSnapshot()

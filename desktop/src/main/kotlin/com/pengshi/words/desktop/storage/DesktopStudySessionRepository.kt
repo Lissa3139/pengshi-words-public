@@ -8,6 +8,7 @@ import com.pengshi.words.model.DailyQuota
 import com.pengshi.words.model.DailyPlanCandidate
 import com.pengshi.words.model.DailyPlanEntry
 import com.pengshi.words.model.DailyPlanItem
+import com.pengshi.words.model.DailyItemStatus
 import com.pengshi.words.model.DailyPlanRepository
 import com.pengshi.words.model.ExampleSentence
 import com.pengshi.words.model.FeedbackContext
@@ -219,6 +220,42 @@ class DesktopStudySessionRepository(
             plan.copy(id = planId)
         }
 
+    /** Replaces only an untouched automatic plan while applying its canonical remote lock. */
+    suspend fun replaceUnstartedPlanFromSync(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan =
+        database.transaction { connection ->
+            require(plan.id > 0) { "An existing plan id is required" }
+            DailyQuota.requireValid(plan.quota)
+            require(entries.count { it.item.source != PlanSource.EXTRA } <= plan.quota) {
+                "Daily plan cannot contain more than its locked quota"
+            }
+            val persistedPlan = requireNotNull(connection.plan(plan.id)) { "Daily plan no longer exists" }
+            require(persistedPlan.localDate == plan.localDate) { "Daily plan date changed during sync" }
+            val oldItems = connection.queryList(
+                "SELECT * FROM daily_plan_items WHERE daily_plan_id = ? ORDER BY selection_rank",
+                { it.setLong(1, plan.id) },
+            ) { it.toDailyPlanItem() }
+            require(oldItems.all { item ->
+                item.source in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) &&
+                    item.status == DailyItemStatus.PENDING &&
+                    connection.events(item.id).let { events ->
+                        events.isNotEmpty() && events.all {
+                            it.status == IntradayEventStatus.PENDING && it.feedback == null
+                        }
+                    }
+            }) { "Only an untouched automatic plan can be replaced from sync" }
+            oldItems.forEach { item ->
+                connection.executeUpdate(
+                    "DELETE FROM intraday_review_events WHERE daily_plan_item_id = ?",
+                ) { it.setLong(1, item.id) }
+            }
+            connection.executeUpdate("DELETE FROM daily_plan_items WHERE daily_plan_id = ?") {
+                it.setLong(1, plan.id)
+            }
+            connection.updatePlan(plan.copy(id = persistedPlan.id))
+            entries.forEach { entry -> connection.insertEntry(persistedPlan.id, entry) }
+            plan.copy(id = persistedPlan.id)
+        }
+
     override suspend fun appendToPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan =
         database.transaction { connection ->
             require(plan.id > 0) { "An existing plan id is required" }
@@ -273,11 +310,12 @@ class DesktopStudySessionRepository(
             plan
         }
 
-    override suspend fun replaceUnseenNewItems(
+    override suspend fun replaceUnseenAutomaticItems(
         plan: DailyPlan,
         removeItemIds: Set<Long>,
         entries: List<DailyPlanEntry>,
         now: Instant,
+        reason: String,
     ): DailyPlan = database.transaction { connection ->
         require(plan.id > 0) { "An existing plan id is required" }
         val persistedPlanQuota = requireNotNull(connection.plan(plan.id)) { "Daily plan no longer exists" }.quota
@@ -289,11 +327,13 @@ class DesktopStudySessionRepository(
         val removedItems = persistedItems.filter { it.id in removeItemIds }
         require(removedItems.size == removeItemIds.size) { "Every replacement item must belong to the plan" }
         removedItems.forEach { item ->
-            require(item.source == PlanSource.NEW) { "Only automatic NEW items can be replaced: ${item.id}" }
+            require(item.source == PlanSource.NEW || item.source == PlanSource.DUE_REVIEW) {
+                "Only automatic review or new items can be replaced: ${item.id}"
+            }
             val events = connection.events(item.id)
             require(item.status == com.pengshi.words.model.DailyItemStatus.PENDING && events.isNotEmpty() &&
                 events.all { event -> event.status == IntradayEventStatus.PENDING && event.feedback == null }) {
-                "Only unseen NEW items can be replaced: ${item.id}"
+                "Only unseen automatic items can be replaced: ${item.id}"
             }
         }
         val retainedEntries = persistedItems.filterNot { it.id in removeItemIds }.mapNotNull { item ->
@@ -321,8 +361,10 @@ class DesktopStudySessionRepository(
         entries.forEach { entry -> connection.insertEntry(plan.id, entry) }
         val actualMainCount = persistedItems.count { it.id !in removeItemIds && it.source != PlanSource.EXTRA } +
             entries.count { it.item.source != PlanSource.EXTRA }
-        require(actualMainCount <= maxOf(persistedPlanQuota, plan.quota)) {
-            "Daily plan cannot contain more items than its existing or updated quota"
+        if (entries.isNotEmpty()) {
+            require(actualMainCount <= maxOf(persistedPlanQuota, plan.quota)) {
+                "Daily plan cannot contain more items than its existing or updated quota"
+            }
         }
         val updatedPlan = plan.copy(plannedUniqueWordCount = actualMainCount, updatedAt = now)
         connection.updatePlan(updatedPlan)
@@ -350,7 +392,7 @@ class DesktopStudySessionRepository(
                     removedItemKeys = removedWordKeys,
                     oldPlanVersion = oldPlanVersion,
                     newPlanVersion = oldPlanVersion + 1,
-                    reason = "due-review-priority",
+                    reason = reason,
                 ),
                 now,
             )

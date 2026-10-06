@@ -7,6 +7,7 @@ import com.pengshi.words.model.PersonalWordInput
 import com.pengshi.words.model.PersonalWordResult
 import com.pengshi.words.model.StudyMode
 import com.pengshi.words.model.normalizeDictionaryText
+import com.pengshi.words.model.sameMeaningContent
 import com.pengshi.words.model.wordSenseKey
 import com.pengshi.words.model.sourceLabelNeedsUpgrade
 import java.time.Instant
@@ -105,7 +106,9 @@ class RoomPersonalWordRepository(
         if (definition.isBlank()) return false
         val key = wordSenseKey(partOfSpeech, definition)
         val cleanSource = source.trim().ifBlank { com.pengshi.words.model.SOURCE_UNVERIFIED }
-        if (key == wordSenseKey(word.partOfSpeech, word.definitionCn)) {
+        if (key == wordSenseKey(word.partOfSpeech, word.definitionCn) ||
+            sameMeaningContent(word.definitionCn, definition)
+        ) {
             if (sourceLabelNeedsUpgrade(word.definitionSource, cleanSource)) {
                 database.wordDao().getById(word.id)?.let { current ->
                     database.wordDao().update(current.copy(definitionSource = cleanSource, updatedAt = timestamp))

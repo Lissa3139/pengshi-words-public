@@ -3,6 +3,7 @@ package com.pengshi.words.desktop.speech
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.sun.jna.platform.win32.Kernel32
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
@@ -257,8 +258,8 @@ internal class ClasspathDesktopSpeechResources(private val root: Path) : Desktop
     }
 
     override fun espeakDataDirectory(): Path {
-        val target = root.resolve("sherpa-onnx-1.13.8/espeak-ng-data")
-        if (Files.isRegularFile(target.resolve("phontab")) && Files.isRegularFile(target.resolve("en_dict"))) return target
+        val target = DesktopSpeechModelPaths.espeakDataDirectory(root)
+        if (ESPEAK_REQUIRED_FILES.all { Files.isRegularFile(target.resolve(it)) }) return target
         Files.createDirectories(target.parent)
         val zipResource = requireNotNull(javaClass.getResourceAsStream("/espeak-ng-data.zip")) {
             "Bundled eSpeak data was not found in the application resources"
@@ -278,7 +279,9 @@ internal class ClasspathDesktopSpeechResources(private val root: Path) : Desktop
                 }
             }
             val extracted = temporary.resolve("espeak-ng-data")
-            require(Files.isRegularFile(extracted.resolve("phontab"))) { "Bundled eSpeak data is incomplete" }
+            require(ESPEAK_REQUIRED_FILES.all { Files.isRegularFile(extracted.resolve(it)) }) {
+                "Bundled eSpeak data is incomplete"
+            }
             if (Files.exists(target)) target.toFile().deleteRecursively()
             Files.move(extracted, target, StandardCopyOption.REPLACE_EXISTING)
         } finally {
@@ -291,6 +294,10 @@ internal class ClasspathDesktopSpeechResources(private val root: Path) : Desktop
         val stream = requireNotNull(javaClass.getResourceAsStream(name)) { "Missing bundled voice resource $name" }
         Files.createDirectories(target.parent)
         stream.use { input -> Files.newOutputStream(target).use(input::copyTo) }
+    }
+
+    private companion object {
+        val ESPEAK_REQUIRED_FILES = listOf("phontab", "phonindex", "phondata", "intonations", "en_dict")
     }
 }
 
@@ -305,6 +312,11 @@ private data class VoiceModel(val directory: String, val modelFile: String) {
 
 private object SherpaDesktopTtsRuntimeFactory : DesktopTtsRuntimeFactory {
     override fun create(modelFile: String, modelDirectory: Path, espeakDataDirectory: Path): DesktopTtsRuntime {
+        val espeakPath = espeakDataDirectory.toAbsolutePath().normalize().toString()
+        require(espeakPath.all { it.code < 128 }) { "语音数据目录必须使用英文路径。" }
+        check(Kernel32.INSTANCE.SetEnvironmentVariable("ESPEAK_DATA_PATH", espeakPath)) {
+            "无法配置 eSpeak 语音数据目录。"
+        }
         SherpaWindowsNativeLibraries.load(DesktopSpeechModelPaths.userRoot())
         val vits = OfflineTtsVitsModelConfig.builder()
             .setModel(modelDirectory.resolve(modelFile).toString())
@@ -330,9 +342,38 @@ private object SherpaDesktopTtsRuntimeFactory : DesktopTtsRuntimeFactory {
 
 /** Keep native libraries writable even when the models live beside a protected installation. */
 internal object DesktopSpeechModelPaths {
+    private const val SPEECH_RUNTIME_DIRECTORY = "sherpa-onnx-1.13.8"
+
     fun userRoot(): Path {
         val local = System.getenv("LOCALAPPDATA")?.takeIf(String::isNotBlank)?.let(Path::of)
         return (local ?: Path.of(System.getProperty("user.home"))).resolve("PengshiWordsOpenSource/speech-models")
+    }
+
+    fun espeakDataDirectory(preferredRoot: Path): Path {
+        val suffix = Path.of(SPEECH_RUNTIME_DIRECTORY, "espeak-ng-data")
+        val tempRoot = System.getProperty("java.io.tmpdir")?.takeIf(String::isNotBlank)?.let(Path::of)
+        val systemRoot = System.getenv("SystemRoot")?.takeIf(String::isNotBlank)?.let(Path::of)
+        val candidates = listOfNotNull(
+            preferredRoot.resolve(suffix),
+            userRoot().resolve(suffix),
+            tempRoot?.resolve("PengshiWordsOpenSource")?.resolve(suffix),
+            systemRoot?.resolve("Temp/PengshiWordsOpenSource")?.resolve(suffix),
+            Path.of("C:\\Windows\\Temp\\PengshiWordsOpenSource").resolve(suffix),
+        ).distinct()
+
+        candidates.forEach { candidate ->
+            val asciiPath = runCatching {
+                Files.createDirectories(candidate.parent)
+                val probe = Files.createTempFile(candidate.parent, ".speech-path-", ".tmp")
+                try {
+                    asAsciiNativePath(candidate)
+                } finally {
+                    Files.deleteIfExists(probe)
+                }
+            }.getOrNull()
+            if (asciiPath != null) return asciiPath
+        }
+        error("无法为离线语音找到纯英文路径，请检查 Windows 临时文件夹权限。")
     }
 
     fun defaultExternal(): Path {
@@ -350,6 +391,21 @@ internal object DesktopSpeechModelPaths {
             Files.createTempFile(candidate, ".write-check-", ".tmp").also(Files::deleteIfExists)
             true
         }.getOrDefault(false)) candidate else legacy
+    }
+
+    private fun asAsciiNativePath(path: Path): Path? {
+        val absolute = path.toAbsolutePath().normalize()
+        if (absolute.toString().all { it.code < 128 }) return absolute
+        if (!System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) return null
+
+        val parent = absolute.parent ?: return null
+        val buffer = CharArray(32_768)
+        val length = runCatching {
+            Kernel32.INSTANCE.GetShortPathName(parent.toString(), buffer, buffer.size)
+        }.getOrDefault(0)
+        if (length <= 0 || length >= buffer.size) return null
+        val shortPath = Path.of(String(buffer, 0, length)).resolve(absolute.fileName).normalize()
+        return shortPath.takeIf { it.toString().all { character -> character.code < 128 } }
     }
 }
 

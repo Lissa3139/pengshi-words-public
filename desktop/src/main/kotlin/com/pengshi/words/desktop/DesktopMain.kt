@@ -40,6 +40,12 @@ object DesktopMetadata {
 
 fun main(args: Array<String>) {
     val container = DesktopContainer.open()
+    val previousExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
+    Thread.setDefaultUncaughtExceptionHandler { thread, failure ->
+        container.recordRuntimeDiagnostic("uncaught failure on ${thread.name}", failure)
+        if (previousExceptionHandler != null) previousExceptionHandler.uncaughtException(thread, failure)
+        else failure.printStackTrace(System.err)
+    }
     try {
         runBlocking {
             container.restoreLocalRepositoryBootstrapIfNeeded()

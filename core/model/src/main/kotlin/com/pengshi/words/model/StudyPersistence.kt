@@ -142,13 +142,14 @@ interface DailyPlanRepository : DailyStudyRepository {
     suspend fun createPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan
     suspend fun appendToPlan(plan: DailyPlan, entries: List<DailyPlanEntry>): DailyPlan =
         error("Appending words is not supported by this repository")
-    /** Replaces only unseen NEW items; completed or in-progress items must be excluded by the caller. */
-    suspend fun replaceUnseenNewItems(
+    /** Replaces unseen automatic review/new items; completed or in-progress items must be excluded by the caller. */
+    suspend fun replaceUnseenAutomaticItems(
         plan: DailyPlan,
         removeItemIds: Set<Long>,
         entries: List<DailyPlanEntry>,
         now: java.time.Instant,
-    ): DailyPlan = error("Replacing unseen new items is not supported by this repository")
+        reason: String = "due-review-priority",
+    ): DailyPlan = error("Replacing unseen automatic items is not supported by this repository")
     /** Reopens only today's due-review items for another review. */
     suspend fun resetTodayReview(localDate: java.time.LocalDate, now: java.time.Instant): Int =
         error("Resetting today's review is not supported by this repository")

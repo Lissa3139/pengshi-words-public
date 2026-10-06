@@ -42,6 +42,7 @@ data class DesktopHomeState(
     val isTodayComplete: Boolean = false,
     val checkInDates: Set<LocalDate> = emptySet(),
     val isAvailable: Boolean = true,
+    val plannedUniqueWordCount: Int = 0,
 )
 
 data class DesktopDeckSummary(

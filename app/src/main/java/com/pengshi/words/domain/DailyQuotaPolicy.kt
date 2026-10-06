@@ -16,7 +16,7 @@ internal object DailyQuotaPolicy {
 
     fun sanitize(quota: Int): Int = quota.coerceIn(MIN_QUOTA, MAX_QUOTA)
 
-    fun removableNewItemIds(
+    fun removableAutomaticItemIds(
         items: List<DailyPlanItem>,
         eventsByItemId: Map<Long, List<IntradayReviewEvent>>,
         targetQuota: Int,
@@ -27,9 +27,9 @@ internal object DailyQuotaPolicy {
         val excess = (mainCount - targetQuota).coerceAtLeast(0)
         if (excess == 0) return emptySet()
 
-        return items.asSequence()
+        val removable = items.asSequence()
             .filter { item ->
-                item.source == PlanSource.NEW &&
+                item.source in setOf(PlanSource.NEW, PlanSource.DUE_REVIEW) &&
                     item.status == DailyItemStatus.PENDING &&
                     item.id != currentItemId
             }
@@ -37,9 +37,20 @@ internal object DailyQuotaPolicy {
                 val events = eventsByItemId[item.id].orEmpty()
                 events.isNotEmpty() && events.all { it.status == IntradayEventStatus.PENDING && it.feedback == null }
             }
+            .toList()
+
+        // Keep due reviews ahead of new words; when a smaller quota cannot fit
+        // all reviews, remove the least-prioritized unseen reviews last.
+        val newWordIds = removable.asSequence()
+            .filter { it.source == PlanSource.NEW }
             .sortedByDescending(DailyPlanItem::selectionRank)
-            .take(excess)
             .map(DailyPlanItem::id)
-            .toCollection(linkedSetOf())
+            .toList()
+        val reviewIds = removable.asSequence()
+            .filter { it.source == PlanSource.DUE_REVIEW }
+            .sortedByDescending(DailyPlanItem::selectionRank)
+            .map(DailyPlanItem::id)
+            .toList()
+        return (newWordIds + reviewIds).take(excess).toCollection(linkedSetOf())
     }
 }

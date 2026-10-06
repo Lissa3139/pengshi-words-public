@@ -48,6 +48,7 @@ data class HomeUiState(
     val phase: HomeStudyPhase = HomeStudyPhase.NOT_STARTED,
     val isTodayComplete: Boolean = false,
     val checkInDates: Set<LocalDate> = emptySet(),
+    val plannedUniqueWordCount: Int = 0,
 )
 
 enum class HomeStudyPhase {
@@ -123,7 +124,10 @@ fun HomeScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("今日任务", style = MaterialTheme.typography.titleLarge)
-                    Text("${state.completedUniqueWordCount} / ${state.quota} 个单词")
+                    Text("${state.completedUniqueWordCount} / ${maxOf(state.quota, state.plannedUniqueWordCount)} 个单词")
+                    Text("每日额度 ${state.quota} · 今日计划 ${state.plannedUniqueWordCount} 个单词",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("到期复习 ${state.dueCount} · 新词 ${state.newCount}")
                     if (state.reviewPlanned > 0 || state.newPlanned > 0 || state.phase == HomeStudyPhase.CHOOSE_NEW) {
                         TaskProgressRow(
@@ -205,11 +209,12 @@ fun HomeScreen(
 
 @Composable
 private fun TaskProgressRow(label: String, completed: Int, planned: Int, active: Boolean) {
+    val remaining = (planned - completed).coerceAtLeast(0)
     val progress = if (planned == 0) 0f else (completed.toFloat() / planned).coerceIn(0f, 1f)
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("$completed / $planned", style = MaterialTheme.typography.labelMedium)
+            Text(remaining.toString(), style = MaterialTheme.typography.labelMedium)
         }
         LinearProgressIndicator(
             progress = { progress },
