@@ -102,7 +102,7 @@ Release 页面中的 **Source code (zip)** 和 **Source code (tar.gz)** 是 GitH
 3. 在应用「设置 → GitHub 同步」中填写仓库所有者、仓库名、分支、同步密码和 Token，保存后选择「立即同步」。
 4. 其他设备连接同一仓库与分支，使用相同同步密码，再各自保存可访问该仓库的 Token。
 
-首次设置时，建议先在保存完整学习记录的设备上同步并确认成功，再连接其他设备。分步骤图文说明见[GitHub 私有同步教程](docs/github-sync.md)；隐私和凭据保存方式见[隐私与数据](docs/privacy.md)。
+首次设置时，建议先在保存完整学习记录的设备上同步并确认成功，再连接其他设备。完整步骤见[GitHub 私有同步教程](docs/github-sync.md)；隐私和凭据保存方式见[隐私与数据](docs/privacy.md)。
 
 ## 语音模型
 
