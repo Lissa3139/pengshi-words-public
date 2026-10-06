@@ -2,6 +2,8 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:80px}
 body{margin:0;color:var(--fg);background:radial-gradient(ellipse 58% 18% at 50% 62%,rgba(29,62,83,.21),transparent 90%),linear-gradient(180deg,#081321 0%,#0c1a2a 52%,#0a1724 100%);-webkit-font-smoothing:antialiased}
+#word-field{position:fixed;z-index:0;inset:0;width:100vw;height:100vh;height:100dvh;pointer-events:none}
+#main-content,.site-footer{position:relative;z-index:1}
 ::selection{background:var(--mint);color:var(--bg)}
 a{color:inherit}
 button{font:inherit}
@@ -18,9 +20,6 @@ button,a{-webkit-tap-highlight-color:transparent}
 .header-link{border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-size:12px;white-space:nowrap}
 .header-link span{color:var(--mint);margin-left:6px}
 .hero{position:relative;isolation:isolate;min-height:1030px;overflow:hidden;padding:150px 24px 76px;text-align:center;background:radial-gradient(ellipse 55% 35% at 50% 35%,rgba(40,78,112,.66),transparent 100%),radial-gradient(ellipse 65% 30% at 50% 68%,rgba(41,75,103,.28),transparent 100%)}
-#word-field,.hero-glow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#word-field{z-index:-1;opacity:.35}
-.hero-glow{z-index:-2;background:radial-gradient(circle at 49% 33%,rgba(87,158,181,.15),transparent 42%)}
 .hero-content{position:relative;z-index:2;max-width:840px;margin:auto}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;margin:0 0 28px;color:#afd6de;font-size:12px;letter-spacing:.12em}
 .eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 14px var(--mint)}
@@ -84,7 +83,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 .gallery-bottom h3{margin:0;font-size:21px;font-weight:600}
 .gallery-bottom p:last-child{margin:6px 0 0;color:var(--mute);font-size:12px}
 .gallery-dots{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:200px}
-.gallery-dots button{width:7px;height:7px;padding:0;border:0;border-radius:7px;background:#567180;cursor:pointer;transition:width .2s,background .2s}
+.gallery-dots button{width:7px;height:7px;padding:0;border:0;border-radius:7px;background:#567180;cursor:pointer;transition:background .2s}
 .gallery-dots button.is-active{width:23px;background:var(--mint)}
 .features-section{padding:38px 0 130px}
 .feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:48px}

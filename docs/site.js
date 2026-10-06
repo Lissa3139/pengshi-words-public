@@ -7,6 +7,7 @@
   if (year) year.textContent = String(new Date().getFullYear());
 
   const labels = { msi: "下载 Windows 版", exe: "下载 Windows EXE", apk: "下载 Android 版" };
+  const fallbackLabels = { msi: "查看 Windows 下载", exe: "查看 Windows 下载", apk: "查看 Android 下载" };
   const primary = $("#primary-download");
   const primaryLabel = $("#primary-download-label");
   const toggle = $("#download-toggle");
@@ -36,9 +37,10 @@
     });
   });
   function updatePrimary() {
-    primaryLabel.textContent = labels[preferred];
-    primary.href = releaseAssets[preferred] || latestUrl;
-    primary.setAttribute("aria-label", labels[preferred] + "，打开 GitHub 下载");
+    const asset = releaseAssets[preferred];
+    primaryLabel.textContent = asset ? labels[preferred] : fallbackLabels[preferred];
+    primary.href = asset || latestUrl;
+    primary.setAttribute("aria-label", (asset ? labels[preferred] : fallbackLabels[preferred]) + "，打开 GitHub Releases");
   }
   updatePrimary();
 
@@ -81,11 +83,11 @@
       }
       const tag = String(release.tag_name || "").trim();
       releaseMeta.textContent = tag
-        ? "最新公开版本 " + tag + " · 下载来自 GitHub Releases"
-        : "下载来自 GitHub Releases";
+        ? "最新公开版本 " + tag + " · GitHub Releases"
+        : "GitHub Releases · Android / Windows";
       updatePrimary();
     } catch {
-      releaseMeta.textContent = "暂时无法读取最新附件 · 点击下载可打开 GitHub Releases";
+      // GitHub's release page remains the fallback; keep the interface quiet.
     } finally {
       clearTimeout(timeout);
     }
