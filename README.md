@@ -1,30 +1,67 @@
-# 彭式背单词
+<p align="center">
+  <img src="docs/images/readme/hero-poster.png" alt="深蓝星点汇聚成彭式背单词标志的项目海报" width="100%">
+</p>
 
-一款以本地词库、间隔复习和英语朗读为基础的 Android 与 Windows 背单词应用。
+<h1 align="center">彭式背单词</h1>
+<p align="center"><strong>记一词，志更远。</strong></p>
+<p align="center">Android 与 Windows 背词应用 · 本地优先 · 可选同步</p>
+<p align="center">
+  <a href="https://lissa3139.github.io/pengshi-words-public/">项目网站</a> ·
+  <a href="#界面全览">界面全览</a> ·
+  <a href="https://github.com/Lissa3139/pengshi-words-public/releases/latest">下载最新版</a> ·
+  <a href="docs/github-sync.md">GitHub 同步教程</a> ·
+  <a href="CONTRIBUTING.md">参与开发</a>
+</p>
 
-[项目网站](https://lissa3139.github.io/pengshi-words-public/) · [下载最新版本](https://github.com/Lissa3139/pengshi-words-public/releases/latest) · [使用指南](docs/user-guide.md)
+<p align="center">
+  <a href="https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml"><img alt="Android build" src="https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml/badge.svg"></a>
+  <a href="https://github.com/Lissa3139/pengshi-words-public/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Lissa3139/pengshi-words-public?display_name=tag&label=release"></a>
+  <img alt="Android 8+ ARM64" src="https://img.shields.io/badge/Android-8%2B%20%7C%20ARM64-3DDC84?logo=android&logoColor=white">
+  <img alt="Windows 10/11 x64" src="https://img.shields.io/badge/Windows-10%2F11%20%7C%20x64-0078D4?logo=windows&logoColor=white">
+  <a href="LICENSE"><img alt="Code license: GPLv3" src="https://img.shields.io/badge/code%20license-GPLv3-blue"></a>
+</p>
 
-[![Android build](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml/badge.svg)](https://github.com/Lissa3139/pengshi-words-public/actions/workflows/build-android.yml)
-[![Latest release](https://img.shields.io/github/v/release/Lissa3139/pengshi-words-public?display_name=tag&label=release)](https://github.com/Lissa3139/pengshi-words-public/releases/latest)
-![Android 8+ ARM64](https://img.shields.io/badge/Android-8%2B%20%7C%20ARM64-3DDC84?logo=android&logoColor=white)
-![Windows 10/11 x64](https://img.shields.io/badge/Windows-10%2F11%20%7C%20x64-0078D4?logo=windows&logoColor=white)
-[![Code license](https://img.shields.io/badge/code%20license-GPLv3-blue)](LICENSE)
+**当前版本：1.0.0 · versionCode 1** · **支持：Android 8.0+ ARM64、Windows 10/11 x64**
 
-**当前版本：1.0.0 · versionCode 1**
+## 界面全览
 
-**支持设备：Android 8.0 及以上 ARM64（arm64-v8a）设备；Windows 10/11 x64 电脑。**
+以下为 Android 与 Windows 应用的主要页面及统计视图。统计截图采用虚构演示记录，不含个人资料。可在 GitHub 页面向下滚动逐页浏览，点击截图可打开原图。
 
-## 界面预览
+### Windows
 
-以下为实际应用界面。学习记录使用独立的虚构演示数据，不包含个人资料。
+| 首页 | 词库 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/windows-home.png"><img src="docs/images/site/screens/windows-home.png" alt="Windows 首页" width="460"></a> | <a href="docs/images/site/screens/windows-decks.png"><img src="docs/images/site/screens/windows-decks.png" alt="Windows 词库" width="460"></a> |
 
-| Windows 首页 | Windows 学习 |
-| --- | --- |
-| <img src="docs/images/site/screens/windows-home.png" alt="彭式背单词 Windows 首页" width="100%"> | <img src="docs/images/site/screens/windows-study-answer.png" alt="彭式背单词 Windows 学习页" width="100%"> |
+| 选词仪表盘 | 学习 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/windows-selection.png"><img src="docs/images/site/screens/windows-selection.png" alt="Windows 选词仪表盘" width="460"></a> | <a href="docs/images/site/screens/windows-study-answer.png"><img src="docs/images/site/screens/windows-study-answer.png" alt="Windows 学习页面" width="460"></a> |
 
-| Android 首页 | Android 学习 |
-| --- | --- |
-| <img src="docs/images/site/screens/android-home.png" alt="彭式背单词 Android 首页" width="260"> | <img src="docs/images/site/screens/android-study-answer.png" alt="彭式背单词 Android 学习页" width="260"> |
+| 遗忘曲线 | 学习情况 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/windows-stats-retention.png"><img src="docs/images/site/screens/windows-stats-retention.png" alt="Windows 遗忘曲线统计" width="460"></a> | <a href="docs/images/site/screens/windows-stats-learning.png"><img src="docs/images/site/screens/windows-stats-learning.png" alt="Windows 学习情况统计" width="460"></a> |
+
+| 记忆持久度 | 设置 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/windows-stats-memory.png"><img src="docs/images/site/screens/windows-stats-memory.png" alt="Windows 记忆持久度统计" width="460"></a> | <a href="docs/images/site/screens/windows-settings.png"><img src="docs/images/site/screens/windows-settings.png" alt="Windows 设置" width="460"></a> |
+
+### Android
+
+| 首页 | 词库 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/android-home.png"><img src="docs/images/site/screens/android-home.png" alt="Android 首页" width="230"></a> | <a href="docs/images/site/screens/android-decks.png"><img src="docs/images/site/screens/android-decks.png" alt="Android 词库" width="230"></a> |
+
+| 选词仪表盘 | 学习 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/android-selection.png"><img src="docs/images/site/screens/android-selection.png" alt="Android 选词仪表盘" width="230"></a> | <a href="docs/images/site/screens/android-study-answer.png"><img src="docs/images/site/screens/android-study-answer.png" alt="Android 学习页面" width="230"></a> |
+
+| 遗忘曲线 | 学习情况 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/android-stats-forgetting.png"><img src="docs/images/site/screens/android-stats-forgetting.png" alt="Android 遗忘曲线统计" width="230"></a> | <a href="docs/images/site/screens/android-stats-learning.png"><img src="docs/images/site/screens/android-stats-learning.png" alt="Android 学习情况统计" width="230"></a> |
+
+| 记忆持久度 | 设置 |
+| :---: | :---: |
+| <a href="docs/images/site/screens/android-stats-memory.png"><img src="docs/images/site/screens/android-stats-memory.png" alt="Android 记忆持久度统计" width="230"></a> | <a href="docs/images/site/screens/android-settings.png"><img src="docs/images/site/screens/android-settings.png" alt="Android 设置" width="230"></a> |
 
 ## 普通用户：下载与安装
 
@@ -55,6 +92,17 @@ Release 页面中的 **Source code (zip)** 和 **Source code (tar.gz)** 是 GitH
 内置词库、学习和内置朗读可以离线使用。缺失例句的补充可能请求 Tatoeba；下载外部模型、配置 GitHub 同步时也需要网络。连接说明见[隐私与数据](docs/privacy.md)。
 
 考研英语词表基于 2024 年英语一大纲，去重后 5,528 词，英语一、英语二共用。自动安排每日新词时，跳过其中的小学常见词和基础功能词；这些词仍保留在词库里，可搜索和手动加入学习。五个内置词包均已补齐词性；已有安装会补齐空缺词性并更新词库名称，不清除学习记录。补充例句已作为静态数据随项目提供，安装和运行应用不需要部署或调用语言模型。词表数据单独采用 CC BY-NC-SA 4.0，需署名、限非商业使用；代码采用 GPLv3。详见[第三方资源与版权说明](THIRD_PARTY_NOTICES.md)。
+
+## 多设备同步
+
+同步使用你自己的 **GitHub 私有仓库**，学习数据在应用写入仓库前会先加密。设置时需要两样不同的凭据：GitHub Token 用来访问指定仓库；同步密码由你自己设置，用于加密和解密，两台设备必须一致。Fine-grained Token 可按设备分别创建，并将写权限限制到你的同步仓库。
+
+1. 在 GitHub 建立一个专用私有仓库，并初始化 README，让它有可用分支。
+2. 创建 Fine-grained Token，将仓库访问范围限制到这一个私有仓库，并仅授予 `Contents: Read and write`。
+3. 在应用「设置 → GitHub 同步」中填写仓库所有者、仓库名、分支、同步密码和 Token，保存后选择「立即同步」。
+4. 其他设备连接同一仓库与分支，使用相同同步密码，再各自保存可访问该仓库的 Token。
+
+首次设置时，建议先在保存完整学习记录的设备上同步并确认成功，再连接其他设备。分步骤图文说明见[GitHub 私有同步教程](docs/github-sync.md)；隐私和凭据保存方式见[隐私与数据](docs/privacy.md)。
 
 ## 语音模型
 
